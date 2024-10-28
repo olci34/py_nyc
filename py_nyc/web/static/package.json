@@ -1,0 +1,17 @@
+{
+  "name": "static",
+  "version": "1.0.0",
+  "description": "High Volume 2023 TLC data project npm package",
+  "main": "static/js/index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "author": "Murat Ogulcan Sahin",
+  "license": "MIT",
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "dependencies": {
+    "leaflet": "^1.9.4"
+  }
+}
