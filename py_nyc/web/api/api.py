@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Request
 import json
+import os
 from starlette import status
 from starlette.responses import HTMLResponse
 from starlette.templating import Jinja2Templates
@@ -39,4 +40,16 @@ def get_trips(date: str):
 
 @router.get("/index", response_class=HTMLResponse)
 def index(request: Request):
+    GEOJSON_FILE_PATH = os.path.join("static", "nyc-taxi-zones.geojson")
+
+    try:
+        # Read the GeoJSON file
+        with open(GEOJSON_FILE_PATH, 'r') as file:
+            geojson_data = json.load(file)  # Parse JSON data
+
+    except FileNotFoundError:
+        print("File not found")
+    except json.JSONDecodeError:
+        print("JSON decoding went wron.")
+
     return templates.TemplateResponse(request=request, name="index.html")
