@@ -9,7 +9,7 @@ from py_nyc.web.api.schemas import ListTripSchema, LocDensitySchema, TripSchema
 from py_nyc.web.external.nyc_open_data_api import get_trip_data
 
 router = APIRouter()
-templates = Jinja2Templates(directory="./../templates")
+templates = Jinja2Templates(directory="./py_nyc/web/templates")
 
 
 @router.get("/home", response_model=LocDensitySchema)
