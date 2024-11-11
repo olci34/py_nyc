@@ -30,6 +30,7 @@ class GeoDataLogic:
 
         """
         req_date = datetime.fromisoformat(date_time)
+        print(req_date.strftime('%Y-%m-%dT%H:%M:%S%z'))
         from_date = req_date - timedelta(hours=hour_span)
         to_date = req_date + timedelta(hours=hour_span)
 
