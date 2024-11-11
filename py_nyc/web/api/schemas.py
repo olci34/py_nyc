@@ -1,6 +1,7 @@
 from typing import Annotated
 from pydantic import BaseModel, Field
 from datetime import datetime
+from typing import List, Tuple
 
 
 class TripSchema(BaseModel):
@@ -14,11 +15,11 @@ class TripSchema(BaseModel):
 
 
 class ListTripSchema(BaseModel):
-    trips: list[TripSchema]
+    trips: List[TripSchema]
 
 
 class LocDensitySchema(BaseModel):
     """
     Pickup location density
     """
-    density: list[tuple[int, int]]
+    density: List[Tuple[int, int]]

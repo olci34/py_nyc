@@ -6,7 +6,8 @@
   "scripts": {
     "build": "webpack",
     "serve": "webpack serve --mode development",
-    "test": "jest"
+    "test": "jest",
+    "watch": "webpack --watch"
   },
   "author": "Murat Ogulcan Sahin",
   "license": "MIT",
