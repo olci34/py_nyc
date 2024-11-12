@@ -1,12 +1,12 @@
 from datetime import datetime, timedelta
 import json
 from starlette import status
-from typing import List
+from typing import List, Dict
 from py_nyc.web.external.nyc_open_data_api import get_trip_data
 
 
 class GeoDataLogic:
-    def get_trips_within(self, date_time: str, hour_span: int) -> List[List]:
+    def get_trips_within(self, date_time: str, hour_span: int) -> Dict[str, int]:
         """
         Returns the number of pick ups in a given date_time and hour_span.
 
@@ -30,7 +30,6 @@ class GeoDataLogic:
 
         """
         req_date = datetime.fromisoformat(date_time)
-        print(req_date.strftime('%Y-%m-%dT%H:%M:%S%z'))
         from_date = req_date - timedelta(hours=hour_span)
         to_date = req_date + timedelta(hours=hour_span)
 
@@ -38,7 +37,7 @@ class GeoDataLogic:
 
         if resp.status_code == status.HTTP_200_OK:
             trip_list = json.loads(resp.content.decode("utf-8"))
-            loc_density = {}
+            loc_density: Dict[str, int] = {}
             for trip in list(trip_list):
                 pulocationid = trip["pulocationid"]
                 if pulocationid in loc_density:
@@ -46,7 +45,6 @@ class GeoDataLogic:
                 else:
                     loc_density[pulocationid] = 1
 
-            return sorted(loc_density.items(),
-                          key=lambda item: item[1], reverse=True)
+            return loc_density
         else:
             raise Exception(f"Something went wrong. {resp.status_code}")

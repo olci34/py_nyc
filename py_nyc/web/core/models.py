@@ -17,6 +17,7 @@ class TaxiZoneProperties:
     location_id: int
     zone: str
     borough: str
+    density: int
 
 
 @dataclass
