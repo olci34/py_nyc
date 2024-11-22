@@ -13,3 +13,4 @@ Pipfile.lock
 *.swp
 .DS_Store
 node_modules/
+dist/
