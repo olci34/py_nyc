@@ -15,3 +15,7 @@ jinja2 = "*"
 [requires]
 python_version = "3.11"
 python_full_version = "3.11.5"
+
+[scripts]
+dev = "uvicorn py_nyc.web.server:server --host localhost --port 8000 --reload"
+

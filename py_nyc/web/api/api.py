@@ -16,7 +16,6 @@ geodata_handler = GeoDataLogic()
 
 @router.get("/trips", response_model=TaxiZoneGeoJSON)
 def get_trips(date: str, hour_span: int):
-    print(hour_span)
     trips = geodata_handler.get_trips_within(date, hour_span)
     GEOJSON_FILE_PATH = './py_nyc/web/static/nyc-taxi-zones.geojson'
 
