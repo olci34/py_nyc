@@ -6,17 +6,15 @@ from py_nyc.web.external.nyc_open_data_api import get_trip_data
 
 
 class GeoDataLogic:
-    def get_trips_within(self, date_time: str, hour_span: int) -> Dict[str, int]:
+    def get_trips_within(self, start_date: datetime, end_date: datetime) -> Dict[str, int]:
         """
         Returns the number of pick ups in a given date_time and hour_span.
 
         Parameters
         ----------
-        date_time : str
-          Date string of trips.
+        start_date : datetime
 
-        hour_span: int
-          Hour window.
+        end_date : datetime
 
         Returns
         -------
@@ -25,15 +23,12 @@ class GeoDataLogic:
 
         Examples
         --------
-        >>> get_trips_within('2024-11-04T15:30:00Z', 2)
+        >>> get_trips_within('2024-11-04T15:30:00Z', '2024-10-04T15:30:00Z')
         [[201, 40], [113, 33]]
 
         """
-        req_date = datetime.fromisoformat(date_time)
-        from_date = req_date - timedelta(hours=hour_span)
-        to_date = req_date + timedelta(hours=hour_span)
 
-        resp = get_trip_data(from_date, to_date)
+        resp = get_trip_data(start_date, end_date)
 
         if resp.status_code == status.HTTP_200_OK:
             trip_list = json.loads(resp.content.decode("utf-8"))

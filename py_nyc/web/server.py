@@ -6,10 +6,9 @@ from py_nyc.web.api.api import router as trips_router
 from fastapi.middleware.cors import CORSMiddleware
 load_dotenv()
 origins = [
-    "http://localhost.tiangolo.com",
-    "https://localhost.tiangolo.com",
     "http://localhost",
     "http://localhost:8080",
+    "http://localhost:3000",
 ]
 
 server = FastAPI(debug=True)

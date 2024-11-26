@@ -49,14 +49,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  function fetchTrips(date, hour_span = 1) {
+  async function fetchTrips(startDate, endDate, hour_span = 1) {
     const tripsURL = "http://localhost:8000/trips";
-    const query = `date=${date.format(
-      "YYYY-MM-DDTHH:mm:ss"
-    )}&hour_span=${hour_span.toString()}`;
-    return fetch(`${tripsURL}?${query}`)
-      .then((d) => d.json())
-      .then((data) => data);
+    const dateFormat = "YYYY-MM-DDTHH:mm:ss";
+    const [start, end] = [
+      startDate.format(dateFormat),
+      endDate.format(dateFormat),
+    ];
+    const query = `startDate=${start}&endDate=${end}&hour_span=${hour_span.toString()}`;
+    const d = await fetch(`${tripsURL}?${query}`);
+    const data = await d.json();
+    return data;
   }
 
   // Initialize the map
@@ -67,11 +70,16 @@ document.addEventListener("DOMContentLoaded", async () => {
       '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
   }).addTo(map);
 
-  const date = moment();
-  date.set("year", 2023);
+  const startDate = moment();
+  const endDate = moment();
+  startDate.set("year", 2023);
+  endDate.set("year", 2023);
+  endDate.subtract(1, "month");
 
-  let tripsGeoJSON = await fetchTrips(date);
-  let geojson = L.geoJSON(tripsGeoJSON, {
+  console.log(startDate, endDate);
+
+  const tripsGeoJSON = await fetchTrips(startDate, endDate);
+  const geojson = L.geoJSON(tripsGeoJSON, {
     style: style,
     onEachFeature: onEachFeature,
   }).addTo(map);
