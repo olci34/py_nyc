@@ -1,15 +1,13 @@
 from datetime import datetime
 from fastapi import APIRouter, Request
 import json
-import os
 from starlette.responses import HTMLResponse
-from starlette.templating import Jinja2Templates
 from py_nyc.web.core.geodata_logic import GeoDataLogic
 from py_nyc.web.core.models import GeoJSONFeature, TaxiZoneGeoJSON
 from typing import List
 
 router = APIRouter()
-templates = Jinja2Templates(directory="./py_nyc/web/templates")
+# templates = Jinja2Templates(directory="./py_nyc/web/templates")
 
 geodata_handler = GeoDataLogic()
 
@@ -36,8 +34,3 @@ def get_trips(startDate: datetime, endDate: datetime):
         print("File not found")
     except json.JSONDecodeError:
         print("JSON decoding went wrong.")
-
-
-@router.get("/index", response_class=HTMLResponse)
-def index(request: Request):
-    return templates.TemplateResponse(request=request, name="index.html")

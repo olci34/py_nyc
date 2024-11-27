@@ -31,14 +31,16 @@ class GeoDataLogic:
         resp = get_trip_data(start_date, end_date)
 
         if resp.status_code == status.HTTP_200_OK:
-            trip_list = json.loads(resp.content.decode("utf-8"))
+            trip_list: Dict[str, str] = json.loads(
+                resp.content.decode("utf-8"))
+
             loc_density: Dict[str, int] = {}
             for trip in list(trip_list):
                 pulocationid = trip["pulocationid"]
                 if pulocationid in loc_density:
-                    loc_density[pulocationid] += 1
-                else:
-                    loc_density[pulocationid] = 1
+                    raise Exception(f"Duplicate location ids found.")
+
+                loc_density[pulocationid] = int(trip["count_pulocationid"])
 
             return loc_density
         else:
