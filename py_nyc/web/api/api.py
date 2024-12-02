@@ -1,36 +1,14 @@
 from datetime import datetime
-from fastapi import APIRouter, Request
-import json
-from starlette.responses import HTMLResponse
+from fastapi import APIRouter
 from py_nyc.web.core.geodata_logic import GeoDataLogic
-from py_nyc.web.core.models import GeoJSONFeature, TaxiZoneGeoJSON
+from py_nyc.web.core.models import TripDensity
 from typing import List
 
 router = APIRouter()
-# templates = Jinja2Templates(directory="./py_nyc/web/templates")
 
 geodata_handler = GeoDataLogic()
 
 
-@router.get("/trips", response_model=TaxiZoneGeoJSON)
-def get_trips(startDate: datetime, endDate: datetime):
-    trips = geodata_handler.get_trips_within(startDate, endDate)
-    GEOJSON_FILE_PATH = './py_nyc/web/static/nyc-taxi-zones.geojson'
-
-    try:
-        # Read the GeoJSON file
-        with open(GEOJSON_FILE_PATH, 'r') as file:
-            geojson_data = json.load(file)
-            fts: List[GeoJSONFeature] = []
-            for geo in geojson_data['features']:
-                location_id = geo['properties']['location_id']
-                if location_id in trips:
-                    geo['properties']['density'] = trips.get(location_id)
-                    fts.append(geo)
-
-        res = TaxiZoneGeoJSON(type=geojson_data['type'], features=fts)
-        return res
-    except FileNotFoundError:
-        print("File not found")
-    except json.JSONDecodeError:
-        print("JSON decoding went wrong.")
+@router.get("/density", response_model=List[TripDensity])
+def get_density(startDate: datetime, endDate: datetime):
+    return geodata_handler.get_density_within(startDate, endDate)
