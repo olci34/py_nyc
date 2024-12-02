@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from pydantic.dataclasses import dataclass as pydantic_dataclass
-from typing import List
+from typing import Dict, List
 
 
 @dataclass
@@ -31,3 +31,9 @@ class GeoJSONFeature:
 class TaxiZoneGeoJSON:
     type: str
     features: List[GeoJSONFeature]
+
+
+@pydantic_dataclass
+class TripDensity:
+    location_id: int
+    density: int

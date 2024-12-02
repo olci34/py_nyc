@@ -4,7 +4,7 @@ import requests
 import os
 
 
-def get_trip_data(from_date: datetime, to_date: datetime):
+def get_density_data(from_date: datetime, to_date: datetime):
     APP_TOKEN = os.environ.get("NYC_OPEN_DATA_APP_TOKEN")
     baseUrl = "https://data.cityofnewyork.us/resource/u253-aew4.json"
     query = {

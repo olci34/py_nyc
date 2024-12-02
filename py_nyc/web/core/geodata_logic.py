@@ -1,14 +1,15 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 import json
 from starlette import status
 from typing import List, Dict
-from py_nyc.web.external.nyc_open_data_api import get_trip_data
+from py_nyc.web.core.models import TripDensity
+from py_nyc.web.external.nyc_open_data_api import get_density_data
 
 
 class GeoDataLogic:
-    def get_trips_within(self, start_date: datetime, end_date: datetime) -> Dict[str, int]:
+    def get_density_within(self, start_date: datetime, end_date: datetime) -> List[TripDensity]:
         """
-        Returns the number of pick ups in a given date_time and hour_span.
+        Returns the number of trips between given start_date and end_date datetimes.
 
         Parameters
         ----------
@@ -18,30 +19,31 @@ class GeoDataLogic:
 
         Returns
         -------
-        List[List[int]]
-          Each list item represents **[pickup_location_id, number_of_pickups]**
+        List[TripDensity]
+
+        [ { location_id: int, denstiy; int }, ... ]
 
         Examples
         --------
-        >>> get_trips_within('2024-11-04T15:30:00Z', '2024-10-04T15:30:00Z')
-        [[201, 40], [113, 33]]
+        >>> get_trips_within('2024-11-04T15:30:00', '2024-10-04T15:30:00')
+        [
+            {location_id: 33, density: 27},
+            {location_id: 224, density: 120}
+        ]
 
         """
 
-        resp = get_trip_data(start_date, end_date)
+        resp = get_density_data(start_date, end_date)
 
         if resp.status_code == status.HTTP_200_OK:
             trip_list: Dict[str, str] = json.loads(
                 resp.content.decode("utf-8"))
 
-            loc_density: Dict[str, int] = {}
-            for trip in list(trip_list):
-                pulocationid = trip["pulocationid"]
-                if pulocationid in loc_density:
-                    raise Exception(f"Duplicate location ids found.")
+            resp: List[TripDensity] = []
+            for trip in trip_list:
+                resp.append(TripDensity(
+                    location_id=trip['pulocationid'], density=trip['count_pulocationid']))
 
-                loc_density[pulocationid] = int(trip["count_pulocationid"])
-
-            return loc_density
+            return resp
         else:
             raise Exception(f"Something went wrong. {resp.status_code}")
