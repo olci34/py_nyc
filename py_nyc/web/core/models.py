@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+from datetime import datetime
+from pydantic import conint
 from pydantic.dataclasses import dataclass as pydantic_dataclass
 from typing import Dict, List
 
@@ -37,3 +39,19 @@ class TaxiZoneGeoJSON:
 class TripDensity:
     location_id: int
     density: int
+
+
+@pydantic_dataclass
+class TripEarning:
+    trip_count: int
+    total_driver_pay: float
+    pickup_date: datetime
+    pickup_hour: conint(ge=0, le=24)  # type: ignore
+
+
+@dataclass
+class TripEarningSoQL:
+    trip_count: str
+    total_driver_pay: str
+    pickup_date: str
+    pickup_hour: str

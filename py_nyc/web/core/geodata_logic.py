@@ -33,17 +33,11 @@ class GeoDataLogic:
 
         """
 
-        resp = get_density_data(start_date, end_date)
+        trip_list = get_density_data(start_date, end_date)
+        resp: List[TripDensity] = []
 
-        if resp.status_code == status.HTTP_200_OK:
-            trip_list: Dict[str, str] = json.loads(
-                resp.content.decode("utf-8"))
+        for trip in trip_list:
+            resp.append(TripDensity(
+                location_id=trip['pulocationid'], density=trip['count_pulocationid']))
 
-            resp: List[TripDensity] = []
-            for trip in trip_list:
-                resp.append(TripDensity(
-                    location_id=trip['pulocationid'], density=trip['count_pulocationid']))
-
-            return resp
-        else:
-            raise Exception(f"Something went wrong. {resp.status_code}")
+        return resp
