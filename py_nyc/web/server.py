@@ -9,8 +9,8 @@ origins = [
     "http://localhost",
     "http://localhost:8000",
     "http://localhost:3000",
-    "https://tlc-shift.vercel.app/",
-    "https://tlc-shift-olci34s-projects.vercel.app/"
+    "https://tlc-shift.vercel.app",
+    "https://tlc-shift-olci34s-projects.vercel.app"
 ]
 
 server = FastAPI(debug=True)
