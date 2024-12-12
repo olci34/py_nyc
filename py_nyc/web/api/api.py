@@ -10,9 +10,6 @@ router = APIRouter()
 geodata_handler = GeoDataLogic()
 earnings_handler = EarningsLogic()
 
-@router.get("/wakeup")
-def wakeup():
-    return {"message": "Server is awake!"}
 
 @router.get("/density", response_model=List[TripDensity])
 def get_density(startDate: datetime, endDate: datetime):
