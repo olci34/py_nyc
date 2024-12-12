@@ -14,10 +14,11 @@ def get_density_data(from_date: datetime, to_date: datetime) -> List[Dict[str, s
     baseUrl = "https://data.cityofnewyork.us/resource/u253-aew4.json"
     query = {
         "$select": "count(pulocationid), pulocationid",
-        "$where": f"request_datetime between '{from_date.isoformat()}' and '{to_date.isoformat()}'",
+        "$where": f"date_trunc_ymd(request_datetime) between '{from_date.strftime('%Y-%m-%d')}' and '{to_date.strftime('%Y-%m-%d')}' and date_extract_hh(request_datetime) between {from_date.hour} and {to_date.hour}",
         "$group": "pulocationid"
     }
     url = f"{baseUrl}?{urlencode(query)}"
+    print(url)
     headers = {"X-App-Token": APP_TOKEN}
 
     resp = requests.get(url, headers=headers)
