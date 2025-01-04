@@ -38,6 +38,6 @@ class GeoDataLogic:
 
         for trip in trip_list:
             resp.append(TripDensity(
-                location_id=trip['pulocationid'], density=trip['count_pulocationid']))
+                location_id=trip['pulocationid'], density=int(trip['count_pulocationid']) / len(trip_list)))
 
         return resp

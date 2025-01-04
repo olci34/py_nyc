@@ -9,6 +9,8 @@ uvicorn = "*"
 requests = "*"
 python-dotenv = "*"
 jinja2 = "*"
+sqlmodel = "*"
+pymongo = "*"
 
 [dev-packages]
 

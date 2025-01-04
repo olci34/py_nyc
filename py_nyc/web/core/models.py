@@ -38,7 +38,7 @@ class TaxiZoneGeoJSON:
 @pydantic_dataclass
 class TripDensity:
     location_id: int
-    density: int
+    density: float
 
 
 @pydantic_dataclass

@@ -18,7 +18,6 @@ def get_density_data(from_date: datetime, to_date: datetime) -> List[Dict[str, s
         "$group": "pulocationid"
     }
     url = f"{baseUrl}?{urlencode(query)}"
-    print(url)
     headers = {"X-App-Token": APP_TOKEN}
 
     resp = requests.get(url, headers=headers)
