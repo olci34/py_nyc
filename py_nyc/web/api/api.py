@@ -1,29 +1,19 @@
 from datetime import datetime
-from fastapi import APIRouter
-from py_nyc.web.core.earnings_logic import EarningsLogic
-from py_nyc.web.core.geodata_logic import GeoDataLogic
-from py_nyc.web.core.models import TripDensity, TripEarning
-from typing import List
+from fastapi import APIRouter, Request
 from py_nyc.web.core.trips_logic import TripsLogic
-from py_nyc.web.data_access.models.trip import Trip
 
-router = APIRouter()
-
-geodata_handler = GeoDataLogic()
-earnings_handler = EarningsLogic()
-trips_handler = TripsLogic()
+router = APIRouter(prefix="/trips", dependencies=[])
 
 
-@router.get("/density", response_model=List[TripDensity])
-def get_density(startDate: datetime, endDate: datetime):
-    return geodata_handler.get_density_within(startDate, endDate)
+@router.get("/density")
+async def get_density(startDate: datetime, endDate: datetime, startTime: int, endTime: int, req: Request):
+    trips_logic: TripsLogic = req.app.state.trips_logic
+    print(startDate, endDate)
+    return await trips_logic.get_density_between(startDate, endDate, startTime, endTime)
 
 
-@router.get("/earnings", response_model=List[TripEarning])
-def get_earnings(startDate: datetime, endDate: datetime):
-    return earnings_handler.get_earnings(startDate, endDate)
-
-
-@router.get("/trips", response_model=List[Trip])
-def get_trips():
-    return trips_handler.get_trips()
+@router.get("/{id}")
+async def get_trip(id: str, req: Request):
+    trips_logic: TripsLogic = req.app.state.trips_logic
+    print(id)
+    return await trips_logic.get_trip(id)
