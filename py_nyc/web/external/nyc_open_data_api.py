@@ -1,6 +1,5 @@
 from datetime import datetime
 from typing import List
-from urllib.parse import urlencode
 from starlette import status
 import json
 import requests

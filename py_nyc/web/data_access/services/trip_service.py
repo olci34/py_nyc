@@ -1,13 +1,10 @@
 from datetime import datetime
 from typing import List
-from motor.motor_asyncio import AsyncIOMotorClient
 from py_nyc.web.core.models import TripDensity, TripEarningSoQL
 from py_nyc.web.external.nyc_open_data_api import get_density_soda, get_earnings_soda
 
 
 class TripService:
-    def __init__(self, database: AsyncIOMotorClient):
-        self.trips_collection = database["trips"]
 
     def get_density_between(self, from_date: datetime, to_date: datetime, start_hr: int, end_hr: int) -> List[TripDensity]:
         return get_density_soda(from_date, to_date, start_hr, end_hr)

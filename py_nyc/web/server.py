@@ -22,7 +22,8 @@ origins = [
 async def setup_dependencies(app: FastAPI):
     print("Setup Dependencies")
     # Services
-    trips_service = TripService(app.database)
+    # trips_service = TripService(app.database)
+    trips_service = TripService()
     # BLL
     trips_logic = TripsLogic(trips_service)
     # Attach to the app
@@ -31,20 +32,20 @@ async def setup_dependencies(app: FastAPI):
 
 @asynccontextmanager
 async def db_lifespan(app: FastAPI):
-    app.mongodb_client = AsyncIOMotorClient("mongodb://localhost:27017")
-    app.database = app.mongodb_client.get_database("tlc_shift")
-    ping_response = await app.database.command("ping")
-    if int(ping_response["ok"]) != 1:
-        raise Exception("Problem connecting to database.")
-    else:
-        print("Connected to database.")
+    # app.mongodb_client = AsyncIOMotorClient("mongodb://localhost:27017")
+    # app.database = app.mongodb_client.get_database("tlc_shift")
+    # ping_response = await app.database.command("ping")
+    # if int(ping_response["ok"]) != 1:
+    #     raise Exception("Problem connecting to database.")
+    # else:
+    #     print("Connected to database.")
 
     await setup_dependencies(app)
-    await init_beanie(database=app.database, document_models=[])
+    # await init_beanie(database=app.database, document_models=[])
 
     yield
     # Shutdown
-    app.mongodb_client.close()
+    # app.mongodb_client.close()
 
 
 server = FastAPI(debug=True, lifespan=db_lifespan)
