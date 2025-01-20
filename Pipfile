@@ -12,6 +12,8 @@ jinja2 = "*"
 sqlmodel = "*"
 motor = {extras = ["srv"], version = "*"}
 beanie = "*"
+pymongo = "*"
+sodapy = "*"
 
 [dev-packages]
 

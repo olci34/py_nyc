@@ -6,7 +6,6 @@ from fastapi import FastAPI
 from py_nyc.web.api.api import router as trips_router
 from fastapi.middleware.cors import CORSMiddleware
 from py_nyc.web.core.trips_logic import TripsLogic
-from py_nyc.web.data_access.models.trip import Trip
 from py_nyc.web.data_access.services.trip_service import TripService
 from motor.motor_asyncio import AsyncIOMotorClient
 
@@ -14,6 +13,7 @@ load_dotenv()
 
 origins = [
     "http://localhost:3000",
+    "http://localhost:8000",
     "https://tlc-shift.vercel.app",
     "https://tlc-shift-olci34s-projects.vercel.app"
 ]
@@ -40,7 +40,7 @@ async def db_lifespan(app: FastAPI):
         print("Connected to database.")
 
     await setup_dependencies(app)
-    await init_beanie(database=app.database, document_models=[Trip])
+    await init_beanie(database=app.database, document_models=[])
 
     yield
     # Shutdown
