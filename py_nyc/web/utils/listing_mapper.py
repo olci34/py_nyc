@@ -22,15 +22,16 @@ def map_listing_response_to_listing(listing_response: ListingResponse) -> Listin
 
 
 def map_image_response_to_image(image_response: ImageResponse) -> Image:
-    binary_data = BsonBinary(base64.b64decode(image_response.image_data))
-    return Image(image_data=binary_data, **image_response.model_dump(exclude={"image_data"}))
+    # binary_data = BsonBinary(base64.b64decode(image_response.image_data))
+    return Image(**image_response.model_dump())
 
 
 def map_image_to_image_response(image: Image) -> ImageResponse:
-    image_base64 = base64.b64encode(image.image_data).decode("utf-8")
+    # image_base64 = base64.b64encode(image.image_data).decode("utf-8")
     return ImageResponse(
         name=image.name,
+        src=image.src,
+        cld_public_id=image.cld_public_id,
         file_type=image.file_type,
-        file_size=image.file_size,
-        image_data=image_base64
+        file_size=image.file_size
     )
