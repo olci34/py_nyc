@@ -15,6 +15,10 @@ beanie = "*"
 pymongo = "*"
 sodapy = "*"
 faker = "*"
+pydantic = {extras = ["email"], version = "*"}
+passlib = {extras = ["bcrypt"], version = "*"}
+pyjwt = "*"
+python-multipart = "*"
 
 [dev-packages]
 

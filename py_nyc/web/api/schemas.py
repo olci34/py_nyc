@@ -1,6 +1,6 @@
 import json
-from typing import Annotated, Optional
-from pydantic import BaseModel, Field
+from typing import Optional
+from pydantic import BaseModel
 from datetime import datetime
 from typing import List, Tuple
 
