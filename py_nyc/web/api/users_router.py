@@ -1,5 +1,5 @@
 from typing import Annotated, Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Body, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
 
@@ -28,19 +28,23 @@ class TokenData(BaseModel):
 
 users_router = APIRouter(prefix='/users')
 
-@users_router.post('/signup')
-async def signup(signup_data: SignupData, users_logic: UsersLogicDep):
+@users_router.post('/signup', status_code=status.HTTP_201_CREATED)
+async def signup(users_logic: UsersLogicDep, signup_data: SignupData = Body()):
   print(signup_data)
   # Check if user with same email exists
   user = await users_logic.find_by_email(signup_data.email)
   if user is not None:
-      return False
+      return HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User with this email already exists",
+        )
+  
   # Hash Password
   hashed_pwd = bcrypt_pwd(signup_data.password)
   # Register User
   user = User(email=signup_data.email, password=hashed_pwd, first_name=signup_data.first_name, last_name=signup_data.last_name)
-  new_user = await users_logic.register(user)
-  return {'created': str(new_user.id)}
+  await users_logic.register(user)
+  return True
 
 
 @users_router.post('/login', response_model=Token)
