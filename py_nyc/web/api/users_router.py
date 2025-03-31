@@ -3,6 +3,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
 
+from py_nyc.web.api.models.login_response import AuthUser, LoginResponse
 from py_nyc.web.core import users_logic
 from py_nyc.web.data_access.models.user import User, UserResponse
 from py_nyc.web.dependencies import UsersLogicDep
@@ -30,7 +31,6 @@ users_router = APIRouter(prefix='/users')
 
 @users_router.post('/signup', status_code=status.HTTP_201_CREATED)
 async def signup(users_logic: UsersLogicDep, signup_data: SignupData = Body()):
-  print(signup_data)
   # Check if user with same email exists
   user = await users_logic.find_by_email(signup_data.email)
   if user is not None:
@@ -47,7 +47,7 @@ async def signup(users_logic: UsersLogicDep, signup_data: SignupData = Body()):
   return True
 
 
-@users_router.post('/login', response_model=Token)
+@users_router.post('/login', response_model=LoginResponse)
 async def login(login_data: Annotated[OAuth2PasswordRequestForm, Depends()], users_logic: UsersLogicDep):
   user = await users_logic.authenticate_user(email=login_data.username, password=login_data.password)
   if not user:
@@ -59,7 +59,8 @@ async def login(login_data: Annotated[OAuth2PasswordRequestForm, Depends()], use
 
   #return TokenData
   token = create_access_token(data={"sub": str(user.id), "email": user.email})
-  return Token(access_token=token, token_type='bearer')
+  auth_user = AuthUser(id=str(user.id), first_name=user.first_name, last_name=user.last_name)
+  return LoginResponse(user=auth_user, access_token=token, token_type='bearer')
   
 
   

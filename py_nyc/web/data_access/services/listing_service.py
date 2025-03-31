@@ -31,7 +31,6 @@ class ListingService:
                     query["item.mileage"] = {"$gte": min_mileage, "$lte": max_mileage}
                 except (ValueError, AttributeError):
                     pass
-        print(search)
         listings = await Listing.find(query).skip(offset).limit(limit).to_list()
         total = await Listing.find(query).count()
 

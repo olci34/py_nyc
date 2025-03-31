@@ -19,7 +19,6 @@ class UsersLogic:
 
   async def register(self, user: User):
     new_user = await self.user_service.register(user)
-    print(new_user)
     return new_user
 
   async def find_by_email(self, email: str) -> User | None:
