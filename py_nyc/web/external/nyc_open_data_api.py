@@ -1,4 +1,5 @@
 from datetime import datetime
+from functools import lru_cache
 from typing import List
 from starlette import status
 import json
@@ -8,7 +9,7 @@ from sodapy import Socrata
 from py_nyc.web.core.models import TripEarningSoQL
 from py_nyc.web.data_access.services.trip_service import TripDensity
 
-
+# TODO: Exploit @lru_cache(maxsize=20)
 def get_density_soda(from_date: datetime, to_date: datetime, start_hr: int, end_hr: int) -> List[TripDensity]:
     APP_TOKEN = os.environ.get("NYC_OPEN_DATA_APP_TOKEN")
     client = Socrata("data.cityofnewyork.us", APP_TOKEN, timeout=120)

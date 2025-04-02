@@ -1,5 +1,4 @@
 from functools import lru_cache
-from fastapi import FastAPI
 from motor.motor_asyncio import AsyncIOMotorClient
 from typing import Annotated
 from fastapi import Depends
@@ -78,5 +77,5 @@ async def get_users_logic(
 ListingsLogicDep = Annotated[ListingsLogic, Depends(get_listings_logic)]
 VehiclesLogicDep = Annotated[VehiclesLogic, Depends(get_vehicles_logic)]
 PlatesLogicDep = Annotated[PlatesLogic, Depends(get_plates_logic)]
-TripsLogicDep = Annotated[TripsLogic, Depends(get_trips_logic)] 
+TripsLogicDep = Annotated[TripsLogic, Depends(get_trips_logic)]
 UsersLogicDep = Annotated[UsersLogic, Depends(get_users_logic)] 

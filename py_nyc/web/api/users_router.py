@@ -1,14 +1,10 @@
-from typing import Annotated, Optional
-from fastapi import APIRouter, Body, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi import APIRouter, Body, HTTPException, status
 from pydantic import BaseModel
-
 from py_nyc.web.api.models.login_response import AuthUser, LoginResponse
-from py_nyc.web.core import users_logic
-from py_nyc.web.data_access.models.user import User, UserResponse
+from py_nyc.web.data_access.models.user import User
 from py_nyc.web.dependencies import UsersLogicDep
 from py_nyc.web.utils.auth import create_access_token
-from py_nyc.web.utils.hashing import bcrypt_pwd, verify_pwd
+from py_nyc.web.utils.hashing import bcrypt_pwd
 
 class SignupData(BaseModel):
     email: str
@@ -20,12 +16,6 @@ class LoginData(BaseModel):
     email: str
     password: str
 
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-
-class TokenData(BaseModel):
-    username: Optional[str] = None
 
 users_router = APIRouter(prefix='/users')
 
@@ -48,8 +38,8 @@ async def signup(users_logic: UsersLogicDep, signup_data: SignupData = Body()):
 
 
 @users_router.post('/login', response_model=LoginResponse)
-async def login(login_data: Annotated[OAuth2PasswordRequestForm, Depends()], users_logic: UsersLogicDep):
-  user = await users_logic.authenticate_user(email=login_data.username, password=login_data.password)
+async def login(users_logic: UsersLogicDep, login_data: LoginData = Body()):
+  user = await users_logic.authenticate_user(email=login_data.email, password=login_data.password)
   if not user:
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -57,9 +47,8 @@ async def login(login_data: Annotated[OAuth2PasswordRequestForm, Depends()], use
         headers={"WWW-Authenticate": "Bearer"},
     )
 
-  #return TokenData
   token = create_access_token(data={"sub": str(user.id), "email": user.email})
-  auth_user = AuthUser(id=str(user.id), first_name=user.first_name, last_name=user.last_name)
+  auth_user = AuthUser(id=user.email, first_name=user.first_name, last_name=user.last_name)
   return LoginResponse(user=auth_user, access_token=token, token_type='bearer')
   
 

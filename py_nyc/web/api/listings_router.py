@@ -1,11 +1,11 @@
-from typing import Annotated, Optional, Union
+from typing import Optional, Union
 from fastapi import APIRouter, Depends, Query
 from py_nyc.web.dependencies import ListingsLogicDep, PlatesLogicDep, VehiclesLogicDep
 from .models.create_listing_request import CreateListingRequest
 from .schemas import ListingSearchParams
 from ..data_access.models.listing import Listing, ListingCategory, ListingsResponse, Plate, Vehicle
 from py_nyc.web.utils.listing_mapper import map_listing_response_to_listing
-from py_nyc.web.utils.auth import oauth2_scheme
+from py_nyc.web.utils.auth import get_user_info, oauth2_scheme
 
 listings_router = APIRouter(prefix="/listings")
 
