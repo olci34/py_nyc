@@ -48,7 +48,7 @@ async def login(users_logic: UsersLogicDep, login_data: LoginData = Body()):
     )
 
   token = create_access_token(data={"sub": str(user.id), "email": user.email})
-  auth_user = AuthUser(id=user.email, first_name=user.first_name, last_name=user.last_name)
+  auth_user = AuthUser(id=user.email, first_name=user.first_name, last_name=user.last_name, email=user.email)
   return LoginResponse(user=auth_user, access_token=token, token_type='bearer')
   
 

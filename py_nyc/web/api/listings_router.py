@@ -45,3 +45,8 @@ async def get_listings(listings_logic: ListingsLogicDep,
 async def get_listing(listings_logic: ListingsLogicDep, id: str):
     res = await listings_logic.get_by_id(id)
     return res
+
+
+@listings_router.delete("/photos/{id}", response_model=bool)
+async def delete_photo(listings_logic: ListingsLogicDep, id: str):
+    return await listings_logic.delete_photo(id)
