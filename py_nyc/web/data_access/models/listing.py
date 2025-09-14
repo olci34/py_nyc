@@ -23,24 +23,29 @@ class FuelType(str, Enum):
 
 
 class Vehicle(Document):
-    make: str
-    model: str
-    year: int
-    mileage: float
-    fuel: FuelType
-    color: Optional[str]
-    details: Optional[str]
+    make: Optional[str] = None
+    model: Optional[str] = None
+    year: Optional[int] = None
+    mileage: Optional[float] = None
+    fuel: Optional[FuelType] = None
+    color: Optional[str] = None
+    details: Optional[str] = None
 
     class Settings:
         name = "vehicles"
 
 
 class Plate(Document):
-    plate_number: str
-    base_number: Optional[str]
+    plate_number: Optional[str] = None
+    base_number: Optional[str] = None
 
     class Settings:
         name = "plates"
+
+
+class Contact(BaseModel):
+    phone: str
+    email: str
 
 
 class Location(BaseModel):
@@ -74,6 +79,7 @@ class ListingResponse(BaseModel):
     # listing_code: int = Indexed(int, unique=True)
     price: float = Field(gt=0)
     location: Location
+    contact: Optional[Contact] = None
     active: bool = True
     images: List[ImageResponse] = []
     created_at: datetime = Field(
@@ -90,6 +96,7 @@ class Listing(Document):
     # listing_code: int = Indexed(int, unique=True)
     price: float = Field(gt=0)
     location: Location
+    contact: Optional[Contact] = None
     active: bool = True
     images: List[Image] = []
     created_at: datetime = Field(

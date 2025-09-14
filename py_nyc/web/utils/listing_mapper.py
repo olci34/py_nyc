@@ -1,5 +1,5 @@
-import base64
-from beanie import BsonBinary
+from beanie import PydanticObjectId
+from py_nyc.web.api.models.update_listing_request import UpdateListingRequest
 from py_nyc.web.data_access.models.listing import Image, ImageResponse, Listing, ListingResponse
 
 
@@ -12,11 +12,13 @@ def map_listing_to_listing_response(listing: Listing) -> ListingResponse:
     return res
 
 
-def map_listing_response_to_listing(listing_response: ListingResponse) -> Listing:
-    imgs = [map_image_response_to_image(img)
-            for img in listing_response.images]
+def map_listing_request_to_listing(listing_response: UpdateListingRequest, user_id: PydanticObjectId) -> Listing:
     res = Listing(
-        images=imgs, item=None, **listing_response.model_dump(exclude={"images", "item"}))
+        images=[],
+        item=None,
+        user_id=user_id,
+        **listing_response.model_dump(exclude={"images", "item"})
+    )
 
     return res
 
