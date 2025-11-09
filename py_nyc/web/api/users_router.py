@@ -52,13 +52,8 @@ async def login(users_logic: UsersLogicDep, login_data: LoginData = Body()):
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    token = create_access_token(data={"sub": str(
+    token = create_access_token(data={"id": str(
         user.id), "email": user.email}, expires_delta=timedelta(minutes=60))
     auth_user = AuthUser(id=str(user.id), first_name=user.first_name,
                          last_name=user.last_name, email=user.email)
     return LoginResponse(user=auth_user, access_token=token, token_type='Bearer')
-
-
-@users_router.get('/me', response_model=AuthUser)
-async def get_current_user(user=Depends(get_user_info)):
-    return AuthUser(id=user.id, first_name=user.first_name, last_name=user.last_name, email=user.email)
