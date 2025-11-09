@@ -2,6 +2,7 @@ from typing import Optional
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from py_nyc.web.api.schemas import ListingSearchParams
 from py_nyc.web.data_access.models.listing import Listing, ListingsResponse
+from beanie import PydanticObjectId
 
 
 class ListingService:
@@ -31,6 +32,13 @@ class ListingService:
                     query["item.mileage"] = {"$gte": min_mileage, "$lte": max_mileage}
                 except (ValueError, AttributeError):
                     pass
+        listings = await Listing.find(query).skip(offset).limit(limit).to_list()
+        total = await Listing.find(query).count()
+
+        return ListingsResponse(listings=listings, total=total)
+
+    async def get_user_listings(self, user_id: PydanticObjectId, offset: int, limit: int) -> ListingsResponse:
+        query = {"user_id": user_id}
         listings = await Listing.find(query).skip(offset).limit(limit).to_list()
         total = await Listing.find(query).count()
 

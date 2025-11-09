@@ -2,6 +2,7 @@ from py_nyc.web.api.schemas import ListingSearchParams
 from py_nyc.web.data_access.models.listing import Listing, ListingResponse
 from py_nyc.web.data_access.services.listing_service import ListingService
 import cloudinary.uploader
+from beanie import PydanticObjectId
 
 
 class ListingsLogic:
@@ -21,3 +22,10 @@ class ListingsLogic:
     async def delete_photo(self, public_cld_id: str):
         cloudinary.uploader.destroy(public_cld_id)
         return True
+
+    async def get_user_listings(self, user_id: PydanticObjectId, page: int, limit: int) -> ListingResponse:
+        offset = (page - 1) * limit
+        return await self.listing_service.get_user_listings(user_id, offset, limit)
+
+    async def update_listing(self, listing: Listing) -> Listing:
+        return await listing.save()
