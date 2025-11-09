@@ -10,10 +10,12 @@ from .core.listings_logic import ListingsLogic
 from .core.plates_logic import PlatesLogic
 from .core.trips_logic import TripsLogic
 from .core.vehicles_logic import VehiclesLogic
+from .core.waitlist_logic import WaitlistLogic
 from .data_access.services.listing_service import ListingService
 from .data_access.services.plate_service import PlateService
 from .data_access.services.trip_service import TripService
 from .data_access.services.vehicle_service import VehicleService
+from .data_access.services.waitlist_service import WaitlistService
 
 # Database dependency
 @lru_cache()
@@ -47,6 +49,9 @@ async def get_trip_service() -> TripService:
 async def get_user_service(db: DB) -> UserService:
     return UserService(db)
 
+async def get_waitlist_service(db: DB) -> WaitlistService:
+    return WaitlistService(db)
+
 # Logic layer dependencies
 async def get_listings_logic(
     listing_service: Annotated[ListingService, Depends(get_listing_service)]
@@ -73,9 +78,15 @@ async def get_users_logic(
 ) -> UsersLogic:
     return UsersLogic(user_service)
 
+async def get_waitlist_logic(
+    waitlist_service: Annotated[WaitlistService, Depends(get_waitlist_service)]
+) -> WaitlistLogic:
+    return WaitlistLogic(waitlist_service)
+
 # Annotated types for cleaner dependency injection
 ListingsLogicDep = Annotated[ListingsLogic, Depends(get_listings_logic)]
 VehiclesLogicDep = Annotated[VehiclesLogic, Depends(get_vehicles_logic)]
 PlatesLogicDep = Annotated[PlatesLogic, Depends(get_plates_logic)]
 TripsLogicDep = Annotated[TripsLogic, Depends(get_trips_logic)]
-UsersLogicDep = Annotated[UsersLogic, Depends(get_users_logic)] 
+UsersLogicDep = Annotated[UsersLogic, Depends(get_users_logic)]
+WaitlistLogicDep = Annotated[WaitlistLogic, Depends(get_waitlist_logic)] 

@@ -6,9 +6,11 @@ from fastapi.security import OAuth2PasswordBearer
 import jwt
 from pydantic import BaseModel
 
+
 class Token(BaseModel):
     access_token: str
     token_type: str
+
 
 class TokenData(BaseModel):
     id: Optional[str] = None
@@ -16,6 +18,7 @@ class TokenData(BaseModel):
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
     ALGORITHM = os.environ.get("ALGORITHM")
@@ -31,6 +34,7 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
+
 def verify_token(token: str, creds_exception: HTTPException) -> TokenData:
     SECRET_KEY = os.environ.get("SECRET_KEY")
     ALGORITHM = os.environ.get("ALGORITHM")
@@ -42,15 +46,16 @@ def verify_token(token: str, creds_exception: HTTPException) -> TokenData:
 
         if email is None or id is None:
             raise creds_exception
-        
+
         return TokenData(id=id, email=email)
-    
+
     except jwt.InvalidTokenError:
         raise creds_exception
 
+
 def get_user_info(token: str = Depends(oauth2_scheme)) -> TokenData:
     cred_exception = HTTPException(
-        status_code= status.HTTP_401_UNAUTHORIZED,
+        status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials.",
         headers={"WWW-Authenticate": "Bearer"}
     )

@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from enum import Enum
 from typing import List, Optional, Union
-from beanie import Document, Indexed, Link
+from beanie import Document, Indexed, Link, PydanticObjectId
 from pydantic import BaseModel, Field
 
 
@@ -71,6 +71,7 @@ class ImageResponse(BaseModel):
 
 
 class ListingResponse(BaseModel):
+    user_id: PydanticObjectId
     title: str = Field(max_length=255, min_length=3)
     description: str = Field(max_length=2000, min_length=3)
     transaction_type: ListingTransactionType
@@ -88,6 +89,7 @@ class ListingResponse(BaseModel):
 
 
 class Listing(Document):
+    user_id: PydanticObjectId
     title: str = Field(max_length=255, min_length=3)
     description: str = Field(max_length=1000, min_length=3)
     transaction_type: ListingTransactionType
