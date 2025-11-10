@@ -29,3 +29,7 @@ class ListingsLogic:
 
     async def update_listing(self, listing: Listing) -> Listing:
         return await listing.save()
+
+    async def soft_delete_listing(self, id: str) -> Listing:
+        """Soft delete a listing by setting active to False"""
+        return await self.listing_service.soft_delete(id)

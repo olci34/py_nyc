@@ -206,3 +206,38 @@ async def edit_listing(
 
     updated = await listings_logic.update_listing(current_listing)
     return updated
+
+
+@listings_router.delete("/{id}", response_model=Listing)
+async def delete_listing(
+    id: str,
+    listings_logic: ListingsLogicDep,
+    user=Depends(get_user_info)
+):
+    """
+    Soft delete a listing by setting active to False and delete all images from Cloudinary
+    """
+    current_listing = await listings_logic.get_by_id(id)
+
+    if current_listing is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Listing not found"
+        )
+
+    if str(current_listing.user_id) != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Unauthorized to delete this listing",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # Delete all images from Cloudinary
+    if current_listing.images and len(current_listing.images) > 0:
+        cld_public_ids = [img.cld_public_id for img in current_listing.images]
+        del_img_req = DeleteImagesRequest(public_ids=cld_public_ids)
+        await delete_images(del_img_req)
+
+    # Soft delete the listing
+    deleted_listing = await listings_logic.soft_delete_listing(id)
+    return deleted_listing

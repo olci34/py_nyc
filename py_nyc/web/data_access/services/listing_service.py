@@ -16,7 +16,7 @@ class ListingService:
         return await Listing.get(id)
 
     async def get_listings(self, offset: int, limit: int, search: ListingSearchParams) -> ListingsResponse:
-        query = {}
+        query = {"active": True}  # Only return active listings
         if search:
             if search.make:
                 query["item.make"] = {"$regex": search.make, "$options": "i"}
@@ -38,8 +38,16 @@ class ListingService:
         return ListingsResponse(listings=listings, total=total)
 
     async def get_user_listings(self, user_id: PydanticObjectId, offset: int, limit: int) -> ListingsResponse:
-        query = {"user_id": user_id}
+        query = {"user_id": user_id, "active": True}  # Only return active listings
         listings = await Listing.find(query).skip(offset).limit(limit).to_list()
         total = await Listing.find(query).count()
 
         return ListingsResponse(listings=listings, total=total)
+
+    async def soft_delete(self, id: str) -> Listing:
+        """Soft delete a listing by setting active to False"""
+        listing = await self.get_by_id(id)
+        if listing:
+            listing.active = False
+            await listing.save()
+        return listing
