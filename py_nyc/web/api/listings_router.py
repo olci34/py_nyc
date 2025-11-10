@@ -7,7 +7,7 @@ from py_nyc.web.utils.listing_mapper import map_listing_request_to_listing, map_
 from py_nyc.web.utils.auth import get_user_info
 from beanie import PydanticObjectId
 from datetime import datetime, timezone
-from .cloudinary_router import delete_images, upload_images
+from .cloudinary_router import DeleteImagesRequest, delete_images, upload_images
 from .models.update_listing_request import UpdateListingRequest
 import json
 import logging
@@ -169,13 +169,16 @@ async def edit_listing(
         img for img in current_listing.images if img not in update.images]
     if len(image_diff) > 0:
         cld_public_ids = [img.cld_public_id for img in image_diff]
-        delete_images(cld_public_ids)
+        del_img_req = DeleteImagesRequest(public_ids=cld_public_ids)
+        await delete_images(del_img_req)
+
+    current_listing.images = update.images
 
     # Add new images
     new_images = form.getlist('images')
     if new_images:
         add_images = await process_image_files(new_images)
-        current_listing.images = update.images + add_images
+        current_listing.images.extend(add_images)
 
     if update.item is not None:
         await current_listing.fetch_link("item")
