@@ -1,5 +1,8 @@
+# Environment files
 .env
-.env.*
+.env.test
+.env.production
+.env.development
 .venv/
 env/
 venv/

@@ -1,10 +1,11 @@
 from datetime import datetime, timedelta, timezone
-import os
 from typing import Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 import jwt
 from pydantic import BaseModel
+
+from py_nyc.web.core.config import Settings, get_settings
 
 
 class Token(BaseModel):
@@ -20,9 +21,9 @@ class TokenData(BaseModel):
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
-def create_access_token(data: dict, expires_delta: timedelta | None = None):
-    ALGORITHM = os.environ.get("ALGORITHM")
-    SECRET_KEY = os.environ.get("SECRET_KEY")
+def create_access_token(data: dict, expires_delta: timedelta | None = None, settings: Settings = None):
+    if settings is None:
+        settings = get_settings()
 
     to_encode = data.copy()
     if expires_delta:
@@ -31,16 +32,16 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
         expire = datetime.now(timezone.utc) + timedelta(minutes=15)
 
     to_encode.update({"exp": expire, "iat": datetime.now(timezone.utc)})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    encoded_jwt = jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
     return encoded_jwt
 
 
-def verify_token(token: str, creds_exception: HTTPException) -> TokenData:
-    SECRET_KEY = os.environ.get("SECRET_KEY")
-    ALGORITHM = os.environ.get("ALGORITHM")
+def verify_token(token: str, creds_exception: HTTPException, settings: Settings = None) -> TokenData:
+    if settings is None:
+        settings = get_settings()
 
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=ALGORITHM)
+        payload = jwt.decode(token, settings.secret_key, algorithms=settings.algorithm)
         email = payload.get("email")
         id = payload.get("id")
 

@@ -1,3 +1,4 @@
+import os
 from contextlib import asynccontextmanager
 from beanie import init_beanie
 import uvicorn
@@ -14,15 +15,29 @@ from py_nyc.web.data_access.models.listing import Listing, Vehicle, Plate
 from py_nyc.web.data_access.models.user import User
 from py_nyc.web.data_access.models.waitlist import Waitlist
 from py_nyc.web.dependencies import get_client, get_db
+from py_nyc.web.core.config import get_settings
 
-load_dotenv()
+# Load environment-specific .env file
+# Note: Settings class also loads the correct env file, but we load here too
+# to ensure env vars are available as early as possible
+# Set ENV variable to 'development', 'test', or 'production'
+# Default to 'development' if not set (safest for local development)
+env = os.getenv("ENV", "development")
 
-origins = [
-    "http://localhost:3000",
-    "http://localhost:8000",
-    "https://tlc-shift.vercel.app",
-    "https://tlc-shift-olci34s-projects.vercel.app"
-]
+# Production uses .env, others use .env.{environment}
+if env == "production":
+    env_file = ".env"
+else:
+    env_file = f".env.{env}"
+
+load_dotenv(env_file, override=True)
+print(f"🌍 Environment: {env}")
+print(f"📁 Config file: {env_file} (loaded with override=True)")
+
+# Get settings and parse CORS origins
+settings = get_settings()
+origins = settings.get_cors_origins_list()
+print(f"🔒 CORS Origins: {origins}")
 
 @asynccontextmanager
 async def db_lifespan(app: FastAPI):

@@ -1,13 +1,14 @@
 from typing import Optional, Union
 from fastapi import APIRouter, Depends, Query, HTTPException, status, Request
 from py_nyc.web.dependencies import ListingsLogicDep, PlatesLogicDep, VehiclesLogicDep
+from py_nyc.web.core.config import Settings, get_settings
 from .schemas import ListingSearchParams
 from ..data_access.models.listing import Image, Listing, ListingCategory, ListingsResponse, Plate, Vehicle, ImageResponse
 from py_nyc.web.utils.listing_mapper import map_listing_request_to_listing, map_image_response_to_image
 from py_nyc.web.utils.auth import get_user_info
 from beanie import PydanticObjectId
 from datetime import datetime, timezone
-from .cloudinary_router import DeleteImagesRequest, delete_images, upload_images
+from .cloudinary_router import _upload_images_internal, _delete_images_internal
 from .models.update_listing_request import UpdateListingRequest
 import json
 import logging
@@ -34,13 +35,23 @@ def parse_listing_form_data(listing_json: str) -> UpdateListingRequest:
         )
 
 
-async def process_image_files(uploaded_files) -> list[Image]:
-    """Process uploaded image files and combine with existing images"""
+async def process_image_files(
+    uploaded_files,
+    settings: Settings,
+    user_id: str,
+    listing_id: Optional[str] = None
+) -> list[Image]:
+    """Process uploaded image files and organize them in Cloudinary by user and listing"""
     if not uploaded_files:
         return []
 
-    # Upload new files to Cloudinary
-    cloudinary_response = await upload_images(uploaded_files)
+    # Upload new files to Cloudinary with organized folder structure
+    cloudinary_response = await _upload_images_internal(
+        uploaded_files,
+        settings,
+        user_id,
+        listing_id
+    )
     new_images = [
         Image(
             name=img["name"],
@@ -60,6 +71,7 @@ async def create_listing(
     listings_logic: ListingsLogicDep,
     vehicles_logic: VehiclesLogicDep,
     plates_logic: PlatesLogicDep,
+    settings: Settings = Depends(get_settings),
     user=Depends(get_user_info)
 ):
     form = await request.form()
@@ -81,14 +93,25 @@ async def create_listing(
     elif listing.listing_category is ListingCategory.Plate:
         item = await plates_logic.create(listing.item)
 
-    uploaded_images = await process_image_files(uploaded_files)
-
+    # Create the listing first to get the listing_id
     new_listing = map_listing_request_to_listing(
         listing, PydanticObjectId(user.id))
     new_listing.item = item
-    new_listing.images = uploaded_images
+    new_listing.images = []  # Empty initially
 
     res = await listings_logic.create_listing(new_listing)
+
+    # Now upload images with the listing_id
+    uploaded_images = await process_image_files(
+        uploaded_files,
+        settings,
+        user.id,
+        str(res.id)
+    )
+
+    # Update the listing with images
+    res.images = uploaded_images
+    await res.save()
 
     return res
 
@@ -140,6 +163,7 @@ async def edit_listing(
     listings_logic: ListingsLogicDep,
     vehicles_logic: VehiclesLogicDep,
     plates_logic: PlatesLogicDep,
+    settings: Settings = Depends(get_settings),
     user=Depends(get_user_info)
 ):
     form = await request.form()
@@ -169,15 +193,19 @@ async def edit_listing(
         img for img in current_listing.images if img not in update.images]
     if len(image_diff) > 0:
         cld_public_ids = [img.cld_public_id for img in image_diff]
-        del_img_req = DeleteImagesRequest(public_ids=cld_public_ids)
-        await delete_images(del_img_req)
+        await _delete_images_internal(cld_public_ids, settings)
 
     current_listing.images = update.images
 
-    # Add new images
+    # Add new images with the listing_id for organized storage
     new_images = form.getlist('images')
     if new_images:
-        add_images = await process_image_files(new_images)
+        add_images = await process_image_files(
+            new_images,
+            settings,
+            user.id,
+            id
+        )
         current_listing.images.extend(add_images)
 
     if update.item is not None:
@@ -212,6 +240,7 @@ async def edit_listing(
 async def delete_listing(
     id: str,
     listings_logic: ListingsLogicDep,
+    settings: Settings = Depends(get_settings),
     user=Depends(get_user_info)
 ):
     """
@@ -235,8 +264,7 @@ async def delete_listing(
     # Delete all images from Cloudinary
     if current_listing.images and len(current_listing.images) > 0:
         cld_public_ids = [img.cld_public_id for img in current_listing.images]
-        del_img_req = DeleteImagesRequest(public_ids=cld_public_ids)
-        await delete_images(del_img_req)
+        await _delete_images_internal(cld_public_ids, settings)
 
     # Soft delete the listing
     deleted_listing = await listings_logic.soft_delete_listing(id)
