@@ -1,3 +1,4 @@
+from typing import Optional
 from datetime import timedelta
 from fastapi import APIRouter, Body, HTTPException, status, Depends
 from pydantic import BaseModel
@@ -13,6 +14,7 @@ class SignupData(BaseModel):
     password: str
     first_name: str
     last_name: str
+    visitor_id: Optional[str] = None
 
 
 class LoginData(BaseModel):
@@ -36,8 +38,13 @@ async def signup(users_logic: UsersLogicDep, signup_data: SignupData = Body()):
     # Hash Password
     hashed_pwd = bcrypt_pwd(signup_data.password)
     # Register User
-    user = User(email=signup_data.email, password=hashed_pwd,
-                first_name=signup_data.first_name, last_name=signup_data.last_name)
+    user = User(
+        email=signup_data.email,
+        password=hashed_pwd,
+        first_name=signup_data.first_name,
+        last_name=signup_data.last_name,
+        visitor_id=signup_data.visitor_id
+    )
     await users_logic.register(user)
     return True
 

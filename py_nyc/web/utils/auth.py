@@ -19,6 +19,7 @@ class TokenData(BaseModel):
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
 
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None, settings: Settings = None):
@@ -62,3 +63,22 @@ def get_user_info(token: str = Depends(oauth2_scheme)) -> TokenData:
     )
 
     return verify_token(token, cred_exception)
+
+
+def get_user_info_optional(token: Optional[str] = Depends(oauth2_scheme_optional)) -> Optional[TokenData]:
+    """
+    Optional authentication - returns user info if token is valid, None otherwise.
+    Used for endpoints that work for both authenticated and anonymous users.
+    """
+    if not token:
+        return None
+
+    try:
+        cred_exception = HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials.",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+        return verify_token(token, cred_exception)
+    except HTTPException:
+        return None
