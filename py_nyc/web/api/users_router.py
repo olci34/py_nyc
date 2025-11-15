@@ -22,6 +22,14 @@ class LoginData(BaseModel):
     password: str
 
 
+class GoogleAuthData(BaseModel):
+    email: str
+    first_name: str
+    last_name: str
+    google_id: str
+    visitor_id: Optional[str] = None
+
+
 users_router = APIRouter(prefix='/users')
 
 
@@ -64,3 +72,47 @@ async def login(users_logic: UsersLogicDep, login_data: LoginData = Body()):
     auth_user = AuthUser(id=str(user.id), first_name=user.first_name,
                          last_name=user.last_name, email=user.email)
     return LoginResponse(user=auth_user, access_token=token, token_type='Bearer')
+
+
+@users_router.post('/google-auth', response_model=LoginResponse)
+async def google_auth(users_logic: UsersLogicDep, google_data: GoogleAuthData = Body()):
+    """
+    Authenticate or register a user via Google OAuth.
+
+    This endpoint will:
+    1. Check if user with google_id exists
+    2. If not, check if user with email exists
+    3. If user exists by email, link google_id to the account
+    4. If user doesn't exist at all, create new user
+    5. Return user data and access token
+    """
+    try:
+        user = await users_logic.authenticate_or_register_google_user(
+            email=google_data.email,
+            first_name=google_data.first_name,
+            last_name=google_data.last_name,
+            google_id=google_data.google_id,
+            visitor_id=google_data.visitor_id
+        )
+
+        # Generate access token
+        token = create_access_token(
+            data={"id": str(user.id), "email": user.email},
+            expires_delta=timedelta(minutes=60)
+        )
+
+        # Create auth user response
+        auth_user = AuthUser(
+            id=str(user.id),
+            first_name=user.first_name,
+            last_name=user.last_name,
+            email=user.email
+        )
+
+        return LoginResponse(user=auth_user, access_token=token, token_type='Bearer')
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to authenticate with Google: {str(e)}"
+        )

@@ -6,9 +6,10 @@ from pydantic import BaseModel, EmailStr, Field
 
 class User(Document):
   email: EmailStr = Indexed(unique=True)
-  password: str
+  password: Optional[str] = None
   first_name: str
   last_name: str
+  google_id: Optional[str] = Indexed(unique=True, sparse=True)
   visitor_id: Optional[str] = None
   created_at: datetime = Field(
       default_factory=lambda: datetime.now(timezone.utc))
