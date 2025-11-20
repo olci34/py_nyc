@@ -59,6 +59,12 @@ class Settings(BaseSettings):
     # CORS - Allowed origins (comma-separated list)
     cors_origins: str
 
+    # Stripe
+    stripe_secret_key: str
+    stripe_publishable_key: str
+    stripe_webhook_secret: str
+    stripe_listing_price_id: str  # Stripe Price ID (e.g., price_1234abcd...)
+
     def get_cors_origins_list(self) -> list[str]:
         """Parse comma-separated CORS origins into a list."""
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]

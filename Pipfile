@@ -21,6 +21,7 @@ pyjwt = "~=2.10.0"
 python-multipart = "~=0.0.20"
 cloudinary = "~=1.44.0"
 pydantic-settings = "*"
+stripe = "~=11.2.0"
 
 [dev-packages]
 

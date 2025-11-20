@@ -101,6 +101,7 @@ class Listing(Document):
     contact: Optional[Contact] = None
     active: bool = True
     images: List[Image] = []
+    stripe_subscription_id: Optional[str] = None  # Stripe subscription ID for recurring billing
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc))
     updated_at: Optional[datetime] = None

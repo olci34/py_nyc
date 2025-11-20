@@ -1,6 +1,6 @@
 from typing import Optional, Union
 from fastapi import APIRouter, Depends, Query, HTTPException, status, Request
-from py_nyc.web.dependencies import ListingsLogicDep, PlatesLogicDep, VehiclesLogicDep
+from py_nyc.web.dependencies import ListingsLogicDep, PlatesLogicDep, VehiclesLogicDep, PaymentsLogicDep
 from py_nyc.web.core.config import Settings, get_settings
 from .schemas import ListingSearchParams
 from ..data_access.models.listing import Image, Listing, ListingCategory, ListingsResponse, Plate, Vehicle, ImageResponse
@@ -240,11 +240,12 @@ async def edit_listing(
 async def delete_listing(
     id: str,
     listings_logic: ListingsLogicDep,
+    payments_logic: PaymentsLogicDep,
     settings: Settings = Depends(get_settings),
     user=Depends(get_user_info)
 ):
     """
-    Soft delete a listing by setting active to False and delete all images from Cloudinary
+    Soft delete a listing by setting active to False, cancel Stripe subscription, and delete all images from Cloudinary
     """
     current_listing = await listings_logic.get_by_id(id)
 
@@ -260,6 +261,16 @@ async def delete_listing(
             detail="Unauthorized to delete this listing",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    # Cancel Stripe subscription if it exists
+    if current_listing.stripe_subscription_id:
+        try:
+            cancel_result = await payments_logic.cancel_subscription(current_listing.stripe_subscription_id)
+            if not cancel_result.success:
+                logger.warning(f"Failed to cancel subscription {current_listing.stripe_subscription_id}: {cancel_result.message}")
+        except Exception as e:
+            logger.error(f"Error canceling subscription: {str(e)}")
+            # Continue with deletion even if subscription cancellation fails
 
     # Delete all images from Cloudinary
     if current_listing.images and len(current_listing.images) > 0:

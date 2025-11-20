@@ -23,3 +23,14 @@ class UserService:
             user.updated_at = datetime.now(timezone.utc)
             await user.save()
         return user
+
+    async def update_stripe_customer_id(self, user_id: str, stripe_customer_id: str) -> User | None:
+        user = await User.get(user_id)
+        if user:
+            user.stripe_customer_id = stripe_customer_id
+            user.updated_at = datetime.now(timezone.utc)
+            await user.save()
+        return user
+
+    async def get_by_id(self, user_id: str) -> User | None:
+        return await User.get(user_id)
