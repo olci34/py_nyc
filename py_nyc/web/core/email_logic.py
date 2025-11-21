@@ -182,31 +182,29 @@ class EmailLogic:
         to_name: Optional[str] = None
     ) -> SendEmailResponse:
         """
-        Send waitlist confirmation email.
-        Template placeholder - implement actual HTML template later.
+        Send waitlist confirmation email using Resend template 'waitlist_en'.
+        Template variables: root_url
         """
-        display_name = to_name or "there"
+        # Get frontend URL from settings (first CORS origin)
+        # In production: https://tlcshift.com
+        # In development: http://localhost:3000
+        frontend_url = self.settings.cors_origins.split(",")[0]
 
-        html = f"""
-        <html>
-            <body>
-                <h1>You're on the Waitlist!</h1>
-                <p>Hi {display_name},</p>
-                <p>Thank you for joining our waitlist. We'll notify you when we're ready to launch!</p>
-                <p>Stay tuned for updates.</p>
-            </body>
-        </html>
-        """
+        template_data = {
+            "root_url": frontend_url
+        }
 
         request = SendEmailRequest(
             to=to_email,
             to_name=to_name,
-            subject="Welcome to the Waitlist - TLC App",
-            html=html,
-            email_type=EmailType.WAITLIST_CONFIRMATION
+            subject="Welcome to the Waitlist - TLC Shift",
+            html="",  # Not used when using template
+            email_type=EmailType.WAITLIST_CONFIRMATION,
+            template_data=template_data
         )
 
-        return await self.send_email(request)
+        # Send using Resend template
+        return await self.send_email(request, template_id="waitlist_en")
 
     async def record_stripe_invoice_email(
         self,
