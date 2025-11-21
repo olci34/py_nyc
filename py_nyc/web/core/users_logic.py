@@ -7,7 +7,7 @@ from py_nyc.web.data_access.models.password_reset import (
 )
 from py_nyc.web.data_access.services.user_service import UserService
 from py_nyc.web.data_access.services.password_reset_service import PasswordResetService
-from py_nyc.web.utils.hashing import verify_pwd, hash_pwd
+from py_nyc.web.utils.hashing import verify_pwd, bcrypt_pwd
 from datetime import datetime, timezone
 
 if TYPE_CHECKING:
@@ -230,7 +230,7 @@ class UsersLogic:
         )
 
       # Hash and update password
-      hashed_password = hash_pwd(new_password)
+      hashed_password = bcrypt_pwd(new_password)
       user.password = hashed_password
       user.updated_at = datetime.now(timezone.utc)
       await user.save()
