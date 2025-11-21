@@ -69,6 +69,8 @@ class Settings(BaseSettings):
     resend_api_key: str
     resend_from_email: str = "noreply@example.com"
     resend_from_name: str = "TLC App"
+    resend_template_waitlist: str = "waitlist_en"
+    resend_template_password_reset: str = "pwdreset_en"
 
     def get_cors_origins_list(self) -> list[str]:
         """Parse comma-separated CORS origins into a list."""

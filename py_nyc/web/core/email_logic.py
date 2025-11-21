@@ -174,7 +174,7 @@ class EmailLogic:
         )
 
         # Send using Resend template
-        return await self.send_email(request, template_id="pwdreset_en")
+        return await self.send_email(request, template_id=self.settings.resend_template_password_reset)
 
     async def send_waitlist_confirmation_email(
         self,
@@ -204,7 +204,7 @@ class EmailLogic:
         )
 
         # Send using Resend template
-        return await self.send_email(request, template_id="waitlist_en")
+        return await self.send_email(request, template_id=self.settings.resend_template_waitlist)
 
     async def record_stripe_invoice_email(
         self,
