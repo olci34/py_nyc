@@ -117,6 +117,19 @@ async def get_trips_logic(
     return TripsLogic(trip_service)
 
 
+async def get_feedback_logic(
+    feedback_service: Annotated[FeedbackService, Depends(get_feedback_service)]
+) -> FeedbackLogic:
+    return FeedbackLogic(feedback_service)
+
+
+async def get_email_logic(
+    email_service: Annotated[EmailService, Depends(get_email_service)],
+    settings: Annotated[Settings, Depends(get_settings)]
+) -> EmailLogic:
+    return EmailLogic(email_service, settings)
+
+
 async def get_users_logic(
     user_service: Annotated[UserService, Depends(get_user_service)],
     password_reset_service: Annotated[PasswordResetService, Depends(get_password_reset_service)],
@@ -130,19 +143,6 @@ async def get_waitlist_logic(
     email_logic: Annotated[EmailLogic, Depends(get_email_logic)]
 ) -> WaitlistLogic:
     return WaitlistLogic(waitlist_service, email_logic)
-
-
-async def get_feedback_logic(
-    feedback_service: Annotated[FeedbackService, Depends(get_feedback_service)]
-) -> FeedbackLogic:
-    return FeedbackLogic(feedback_service)
-
-
-async def get_email_logic(
-    email_service: Annotated[EmailService, Depends(get_email_service)],
-    settings: Annotated[Settings, Depends(get_settings)]
-) -> EmailLogic:
-    return EmailLogic(email_service, settings)
 
 
 async def get_payments_logic(
