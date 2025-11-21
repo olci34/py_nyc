@@ -1,12 +1,19 @@
 from typing import Optional
 from datetime import timedelta
-from fastapi import APIRouter, Body, HTTPException, status, Depends
+from fastapi import APIRouter, Body, HTTPException, status, Depends, Request
 from pydantic import BaseModel
 from py_nyc.web.api.models.login_response import AuthUser, LoginResponse
 from py_nyc.web.data_access.models.user import User
+from py_nyc.web.data_access.models.password_reset import (
+    RequestPasswordResetRequest,
+    RequestPasswordResetResponse,
+    ResetPasswordRequest,
+    ResetPasswordResponse
+)
 from py_nyc.web.dependencies import UsersLogicDep
 from py_nyc.web.utils.auth import create_access_token, get_user_info
 from py_nyc.web.utils.hashing import bcrypt_pwd
+from py_nyc.web.core.config import get_settings
 
 
 class SignupData(BaseModel):
@@ -116,3 +123,64 @@ async def google_auth(users_logic: UsersLogicDep, google_data: GoogleAuthData = 
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to authenticate with Google: {str(e)}"
         )
+
+
+@users_router.post('/request-password-reset', response_model=RequestPasswordResetResponse)
+async def request_password_reset(
+    request: Request,
+    users_logic: UsersLogicDep,
+    reset_request: RequestPasswordResetRequest = Body()
+):
+    """
+    Request a password reset email.
+
+    Security features:
+    - Rate limited (3 requests per 15 minutes per email)
+    - Always returns success (prevents email enumeration)
+    - Tokens expire in 30 minutes
+    - Tokens are single-use
+    """
+    # Get client IP and user agent for audit trail
+    ip_address = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent")
+
+    # Get frontend URL from settings (or use default for local dev)
+    settings = get_settings()
+    frontend_url = settings.cors_origins.split(",")[0] if settings.cors_origins else "http://localhost:3000"
+
+    result = await users_logic.request_password_reset(
+        email=reset_request.email,
+        ip_address=ip_address,
+        user_agent=user_agent,
+        frontend_url=frontend_url
+    )
+
+    return result
+
+
+@users_router.post('/reset-password', response_model=ResetPasswordResponse)
+async def reset_password(
+    users_logic: UsersLogicDep,
+    reset_request: ResetPasswordRequest = Body()
+):
+    """
+    Reset password using a valid token.
+
+    Security features:
+    - Token must be valid (not expired, not used)
+    - Password is hashed before storing
+    - Token is marked as used after successful reset
+    - All other tokens for the user are invalidated
+    """
+    result = await users_logic.reset_password(
+        token=reset_request.token,
+        new_password=reset_request.new_password
+    )
+
+    if not result.success:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=result.message
+        )
+
+    return result

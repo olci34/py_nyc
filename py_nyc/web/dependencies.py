@@ -14,6 +14,7 @@ from .core.vehicles_logic import VehiclesLogic
 from .core.waitlist_logic import WaitlistLogic
 from .core.feedback_logic import FeedbackLogic
 from .core.payments_logic import PaymentsLogic
+from .core.email_logic import EmailLogic
 from .data_access.services.listing_service import ListingService
 from .data_access.services.plate_service import PlateService
 from .data_access.services.trip_service import TripService
@@ -21,6 +22,8 @@ from .data_access.services.vehicle_service import VehicleService
 from .data_access.services.waitlist_service import WaitlistService
 from .data_access.services.feedback_service import FeedbackService
 from .data_access.services.payment_service import PaymentService
+from .data_access.services.email_service import EmailService
+from .data_access.services.password_reset_service import PasswordResetService
 
 
 # Database dependency
@@ -79,6 +82,14 @@ async def get_feedback_service(db: DB) -> FeedbackService:
 async def get_payment_service(db: DB) -> PaymentService:
     return PaymentService(db)
 
+
+async def get_email_service(db: DB) -> EmailService:
+    return EmailService(db)
+
+
+async def get_password_reset_service(db: DB) -> PasswordResetService:
+    return PasswordResetService(db)
+
 # Logic layer dependencies
 
 
@@ -107,15 +118,18 @@ async def get_trips_logic(
 
 
 async def get_users_logic(
-    user_service: Annotated[UserService, Depends(get_user_service)]
+    user_service: Annotated[UserService, Depends(get_user_service)],
+    password_reset_service: Annotated[PasswordResetService, Depends(get_password_reset_service)],
+    email_logic: Annotated[EmailLogic, Depends(get_email_logic)]
 ) -> UsersLogic:
-    return UsersLogic(user_service)
+    return UsersLogic(user_service, password_reset_service, email_logic)
 
 
 async def get_waitlist_logic(
-    waitlist_service: Annotated[WaitlistService, Depends(get_waitlist_service)]
+    waitlist_service: Annotated[WaitlistService, Depends(get_waitlist_service)],
+    email_logic: Annotated[EmailLogic, Depends(get_email_logic)]
 ) -> WaitlistLogic:
-    return WaitlistLogic(waitlist_service)
+    return WaitlistLogic(waitlist_service, email_logic)
 
 
 async def get_feedback_logic(
@@ -124,13 +138,21 @@ async def get_feedback_logic(
     return FeedbackLogic(feedback_service)
 
 
+async def get_email_logic(
+    email_service: Annotated[EmailService, Depends(get_email_service)],
+    settings: Annotated[Settings, Depends(get_settings)]
+) -> EmailLogic:
+    return EmailLogic(email_service, settings)
+
+
 async def get_payments_logic(
     payment_service: Annotated[PaymentService, Depends(get_payment_service)],
     listing_service: Annotated[ListingService, Depends(get_listing_service)],
     user_service: Annotated[UserService, Depends(get_user_service)],
-    settings: Annotated[Settings, Depends(get_settings)]
+    settings: Annotated[Settings, Depends(get_settings)],
+    email_logic: Annotated[EmailLogic, Depends(get_email_logic)]
 ) -> PaymentsLogic:
-    return PaymentsLogic(payment_service, listing_service, user_service, settings)
+    return PaymentsLogic(payment_service, listing_service, user_service, settings, email_logic)
 
 # Annotated types for cleaner dependency injection
 ListingsLogicDep = Annotated[ListingsLogic, Depends(get_listings_logic)]
@@ -140,4 +162,5 @@ TripsLogicDep = Annotated[TripsLogic, Depends(get_trips_logic)]
 UsersLogicDep = Annotated[UsersLogic, Depends(get_users_logic)]
 WaitlistLogicDep = Annotated[WaitlistLogic, Depends(get_waitlist_logic)]
 FeedbackLogicDep = Annotated[FeedbackLogic, Depends(get_feedback_logic)]
+EmailLogicDep = Annotated[EmailLogic, Depends(get_email_logic)]
 PaymentsLogicDep = Annotated[PaymentsLogic, Depends(get_payments_logic)]

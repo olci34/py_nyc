@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 import stripe
 from beanie import PydanticObjectId
 from py_nyc.web.data_access.models.payment import (
@@ -15,6 +15,9 @@ from py_nyc.web.data_access.services.listing_service import ListingService
 from py_nyc.web.data_access.services.user_service import UserService
 from py_nyc.web.core.config import Settings
 
+if TYPE_CHECKING:
+    from py_nyc.web.core.email_logic import EmailLogic
+
 
 class PaymentsLogic:
     """Business logic for payment operations"""
@@ -26,12 +29,14 @@ class PaymentsLogic:
         payment_service: PaymentService,
         listing_service: ListingService,
         user_service: UserService,
-        settings: Settings
+        settings: Settings,
+        email_logic: Optional["EmailLogic"] = None
     ):
         self.payment_service = payment_service
         self.listing_service = listing_service
         self.user_service = user_service
         self.settings = settings
+        self.email_logic = email_logic
         # Initialize Stripe with secret key
         stripe.api_key = settings.stripe_secret_key
 
@@ -216,7 +221,7 @@ class PaymentsLogic:
     async def handle_webhook_event(self, event_type: str, event_data: dict) -> PaymentResponse:
         """
         Handle Stripe webhook events.
-        Subscription events: checkout.session.completed, customer.subscription.deleted, invoice.payment_succeeded, invoice.payment_failed
+        Subscription events: checkout.session.completed, customer.subscription.deleted, invoice.payment_succeeded, invoice.payment_failed, invoice.sent
         """
         try:
             if event_type == 'checkout.session.completed':
@@ -227,6 +232,8 @@ class PaymentsLogic:
                 return await self._handle_invoice_payment_succeeded(event_data)
             elif event_type == 'invoice.payment_failed':
                 return await self._handle_invoice_payment_failed(event_data)
+            elif event_type == 'invoice.sent':
+                return await self._handle_invoice_sent(event_data)
             # Legacy one-time payment events (keeping for backwards compatibility)
             elif event_type == 'payment_intent.succeeded':
                 return await self._handle_payment_succeeded(event_data)
@@ -436,6 +443,55 @@ class PaymentsLogic:
             return PaymentResponse(
                 success=True,
                 message=f"Recurring payment failed for subscription {subscription_id} (attempt {attempt_count})."
+            )
+
+    async def _handle_invoice_sent(self, invoice_data: dict) -> PaymentResponse:
+        """
+        Handle Stripe invoice.sent webhook event.
+        Records that Stripe sent an invoice email to the customer.
+        """
+        if not self.email_logic:
+            # Email logic not initialized, skip recording
+            return PaymentResponse(
+                success=True,
+                message="Email logic not initialized, skipping invoice email recording"
+            )
+
+        invoice_id = invoice_data.get('id')
+        customer_email = invoice_data.get('customer_email')
+        subscription_id = invoice_data.get('subscription')
+        customer_id = invoice_data.get('customer')
+
+        if not invoice_id or not customer_email:
+            return PaymentResponse(
+                success=False,
+                message="Missing invoice_id or customer_email in webhook data"
+            )
+
+        # Get user_id from customer_id if available
+        user_id = None
+        if customer_id:
+            user = await self.user_service.get_by_id(customer_id)
+            if user:
+                user_id = str(user.id)
+
+        # Record that Stripe sent this invoice email
+        result = await self.email_logic.record_stripe_invoice_email(
+            to_email=customer_email,
+            stripe_invoice_id=invoice_id,
+            stripe_subscription_id=subscription_id,
+            user_id=user_id
+        )
+
+        if result.success:
+            return PaymentResponse(
+                success=True,
+                message=f"Recorded Stripe invoice email for {customer_email}"
+            )
+        else:
+            return PaymentResponse(
+                success=False,
+                message=f"Failed to record invoice email: {result.message}"
             )
 
     async def _count_user_active_listings(self, user_id: PydanticObjectId) -> int:

@@ -18,6 +18,8 @@ from py_nyc.web.data_access.models.user import User
 from py_nyc.web.data_access.models.waitlist import Waitlist
 from py_nyc.web.data_access.models.feedback import Feedback
 from py_nyc.web.data_access.models.payment import Payment
+from py_nyc.web.data_access.models.email import Email
+from py_nyc.web.data_access.models.password_reset import PasswordResetToken
 from py_nyc.web.dependencies import get_client, get_db
 from py_nyc.web.core.config import get_settings
 
@@ -55,7 +57,7 @@ async def db_lifespan(app: FastAPI):
         print("Connected to database.")
         
         # Initialize Beanie
-        await init_beanie(database=db, document_models=[Listing, Vehicle, Plate, User, Waitlist, Feedback, Payment])
+        await init_beanie(database=db, document_models=[Listing, Vehicle, Plate, User, Waitlist, Feedback, Payment, Email, PasswordResetToken])
         
         yield
     finally:
