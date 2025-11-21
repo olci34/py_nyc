@@ -2,6 +2,7 @@ from fastapi import APIRouter, Body, HTTPException, status
 from pydantic import BaseModel, EmailStr
 from py_nyc.web.data_access.models.waitlist import WaitlistResponse
 from py_nyc.web.dependencies import WaitlistLogicDep
+from py_nyc.web.core.waitlist_logic import WaitlistAlreadyJoinedException
 
 
 class JoinWaitlistRequest(BaseModel):
@@ -15,7 +16,7 @@ waitlist_router = APIRouter(prefix='/waitlist')
 async def join_waitlist(waitlist_logic: WaitlistLogicDep, request: JoinWaitlistRequest = Body()):
     """
     Add an email to the waitlist.
-    If the email already exists, updates the updated_at timestamp.
+    Returns 409 Conflict if the email has already joined.
     """
     try:
         waitlist_entry = await waitlist_logic.join_waitlist(request.email)
@@ -23,6 +24,11 @@ async def join_waitlist(waitlist_logic: WaitlistLogicDep, request: JoinWaitlistR
             email=waitlist_entry.email,
             created_at=waitlist_entry.created_at,
             updated_at=waitlist_entry.updated_at
+        )
+    except WaitlistAlreadyJoinedException as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This email has already joined the waitlist"
         )
     except Exception as e:
         raise HTTPException(

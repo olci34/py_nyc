@@ -6,6 +6,11 @@ if TYPE_CHECKING:
     from py_nyc.web.core.email_logic import EmailLogic
 
 
+class WaitlistAlreadyJoinedException(Exception):
+    """Raised when a user tries to join the waitlist but has already joined."""
+    pass
+
+
 class WaitlistLogic:
     def __init__(
         self,
@@ -17,10 +22,19 @@ class WaitlistLogic:
 
     async def join_waitlist(self, email: str) -> Waitlist:
         """
-        Add or update an email in the waitlist.
-        Sends confirmation email if email_logic is available.
+        Add an email to the waitlist.
+        Raises WaitlistAlreadyJoinedException if email already exists.
+        Sends confirmation email for new entries.
         """
-        waitlist_entry = await self.waitlist_service.upsert(email)
+        # Check if email already exists
+        existing = await self.waitlist_service.get_by_email(email)
+        if existing:
+            raise WaitlistAlreadyJoinedException(
+                f"Email {email} has already joined the waitlist"
+            )
+
+        # Create new waitlist entry
+        waitlist_entry = await self.waitlist_service.create(email)
 
         # Send confirmation email if email logic is available
         if self.email_logic:
