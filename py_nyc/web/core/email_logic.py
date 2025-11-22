@@ -58,20 +58,20 @@ class EmailLogic:
             try:
                 params = {
                     "to": [request.to],
-                    "subject": request.subject,
                 }
 
                 # Use template or HTML
                 if template_id and request.template_data:
                     # Use Resend template with variables
-                    # Template handles the "from" address
+                    # Template handles the "from" address and subject
                     params["react"] = template_id
                     # Some Resend versions use 'template'
                     params["template"] = template_id
                     params["variables"] = request.template_data
                 else:
-                    # Use HTML - need to specify "from" address
+                    # Use HTML - need to specify "from" address and subject
                     params["from"] = f"{self.settings.resend_from_name} <{self.settings.resend_from_email}>"
+                    params["subject"] = request.subject
                     params["html"] = request.html
 
                 response = resend.Emails.send(params)
