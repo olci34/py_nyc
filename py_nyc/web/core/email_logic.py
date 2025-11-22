@@ -72,11 +72,10 @@ class EmailLogic:
                 # Use template or HTML
                 if template_id and request.template_data:
                     # Use Resend template with variables
-                    # Template handles the "from" address and subject
-                    params["react"] = template_id
-                    # Some Resend versions use 'template'
+                    # Pass template data directly as top-level parameters
+                    params["from"] = f"{self.settings.resend_from_name} <{self.settings.resend_from_email}>"
                     params["template"] = template_id
-                    params["variables"] = request.template_data
+                    params.update(request.template_data)  # Merge template variables directly into params
                 else:
                     # Use HTML - need to specify "from" address and subject
                     params["from"] = f"{self.settings.resend_from_name} <{self.settings.resend_from_email}>"
