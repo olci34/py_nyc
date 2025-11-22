@@ -65,10 +65,10 @@ class Settings(BaseSettings):
     stripe_webhook_secret: str
     stripe_listing_price_id: str  # Stripe Price ID (e.g., price_1234abcd...)
 
-    # Resend (Email Service)
-    resend_api_key: str
-    resend_from_email: str = "noreply@example.com"
-    resend_from_name: str = "TLC App"
+    # Resend (Email Service) - Optional
+    resend_api_key: str | None = None
+    resend_from_email: str = "no-reply@example.com"
+    resend_from_name: str = "TLC Shift"
     resend_template_waitlist: str = "waitlist_en"
     resend_template_password_reset: str = "pwdreset_en"
     resend_template_welcome: str = "welcomeemail_en"
@@ -82,5 +82,6 @@ class Settings(BaseSettings):
 def get_settings() -> Settings:
     """Get cached settings instance. Only created once per application lifecycle."""
     settings = Settings()
-    print(f"[Config] Settings loaded - DB: {settings.mongodb_db_name}, Cloudinary: {settings.cloudinary_env}")
+    print(
+        f"[Config] Settings loaded - DB: {settings.mongodb_db_name}, Cloudinary: {settings.cloudinary_env}")
     return settings

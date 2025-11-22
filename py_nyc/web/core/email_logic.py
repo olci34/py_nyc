@@ -20,8 +20,9 @@ class EmailLogic:
     def __init__(self, email_service: EmailService, settings: Settings):
         self.email_service = email_service
         self.settings = settings
-        # Initialize Resend with API key
-        resend.api_key = settings.resend_api_key
+        # Initialize Resend with API key if configured
+        if settings.resend_api_key:
+            resend.api_key = settings.resend_api_key
 
     async def send_email(
         self,
@@ -39,6 +40,14 @@ class EmailLogic:
         Returns:
             SendEmailResponse with success status and IDs
         """
+        # Check if Resend is configured
+        if not self.settings.resend_api_key:
+            print("Resend API key not configured. Email sending is disabled.")
+            return SendEmailResponse(
+                success=False,
+                message="Email service not configured"
+            )
+
         try:
             # Create email record in database (status: PENDING)
             email_record = Email(
