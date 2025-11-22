@@ -66,7 +66,8 @@ class EmailLogic:
                     # Use Resend template with variables
                     # Template handles the "from" address
                     params["react"] = template_id
-                    params["template"] = template_id  # Some Resend versions use 'template'
+                    # Some Resend versions use 'template'
+                    params["template"] = template_id
                     params["variables"] = request.template_data
                 else:
                     # Use HTML - need to specify "from" address
@@ -79,14 +80,16 @@ class EmailLogic:
                 await self.email_service.update_status(
                     str(created_email.id),
                     EmailStatus.SENT,
-                    provider_message_id=response.get('id') if isinstance(response, dict) else None
+                    provider_message_id=response.get(
+                        'id') if isinstance(response, dict) else None
                 )
 
                 return SendEmailResponse(
                     success=True,
                     message="Email sent successfully",
                     email_id=str(created_email.id),
-                    provider_message_id=response.get('id') if isinstance(response, dict) else None
+                    provider_message_id=response.get(
+                        'id') if isinstance(response, dict) else None
                 )
 
             except Exception as resend_error:
@@ -116,28 +119,29 @@ class EmailLogic:
         user_id: str
     ) -> SendEmailResponse:
         """
-        Send a welcome email to new users.
-        Template placeholder - implement actual HTML template later.
+        Send welcome email using Resend template 'welcomeemail_en'.
+        Template variables: name, root_url
         """
-        html = f"""
-        <html>
-            <body>
-                <h1>Welcome to TLC App, {to_name}!</h1>
-                <p>Thank you for signing up. We're excited to have you on board.</p>
-            </body>
-        </html>
-        """
+        # Get frontend URL from settings (first CORS origin)
+        frontend_url = self.settings.cors_origins.split(",")[0]
+
+        template_data = {
+            "name": to_name,
+            "root_url": frontend_url
+        }
 
         request = SendEmailRequest(
             to=to_email,
             to_name=to_name,
-            subject="Welcome to TLC App!",
-            html=html,
+            subject="Welcome to TLC Shift!",
+            html="",  # Not used when using template
             email_type=EmailType.WELCOME,
-            user_id=user_id
+            user_id=user_id,
+            template_data=template_data
         )
 
-        return await self.send_email(request)
+        # Send using Resend template
+        return await self.send_email(request, template_id=self.settings.resend_template_welcome)
 
     async def send_password_reset_email(
         self,
@@ -187,8 +191,6 @@ class EmailLogic:
         Template variables: root_url
         """
         # Get frontend URL from settings (first CORS origin)
-        # In production: https://tlcshift.com
-        # In development: http://localhost:3000
         frontend_url = self.settings.cors_origins.split(",")[0]
 
         template_data = {

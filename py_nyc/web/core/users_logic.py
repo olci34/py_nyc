@@ -41,6 +41,19 @@ class UsersLogic:
 
   async def register(self, user: User):
     new_user = await self.user_service.register(user)
+
+    # Send welcome email if email logic is available
+    if self.email_logic and new_user.email and new_user.first_name:
+      try:
+        await self.email_logic.send_welcome_email(
+          to_email=new_user.email,
+          to_name=new_user.first_name,
+          user_id=str(new_user.id)
+        )
+      except Exception as e:
+        # Log error but don't fail registration
+        print(f"Failed to send welcome email: {str(e)}")
+
     return new_user
 
   async def find_by_email(self, email: str) -> User | None:
@@ -87,7 +100,10 @@ class UsersLogic:
       visitor_id=visitor_id,
       password=None  # OAuth users don't have passwords
     )
-    return await self.register(new_user)
+    created_user = await self.register(new_user)
+
+    # Welcome email is already sent in register() method
+    return created_user
 
   async def request_password_reset(
       self,
