@@ -72,6 +72,7 @@ class Settings(BaseSettings):
     resend_template_waitlist: str = "waitlist_en"
     resend_template_password_reset: str = "pwdreset_en"
     resend_template_welcome: str = "welcomeemail_en"
+    resend_template_oauth_password_attempt: str = "oauth_password_reset_en"
 
     def get_cors_origins_list(self) -> list[str]:
         """Parse comma-separated CORS origins into a list."""

@@ -151,7 +151,18 @@ class UsersLogic:
 
       # OAuth users cannot reset passwords
       if not user.password:
-        # Don't reveal this is an OAuth user
+        # Send email explaining they need to use Google sign-in
+        if self.email_logic:
+          try:
+            await self.email_logic.send_oauth_password_attempt_email(
+              to_email=email,
+              to_name=user.first_name,
+              user_id=str(user.id)
+            )
+          except Exception as e:
+            print(f"Failed to send OAuth password attempt email: {str(e)}")
+
+        # Return generic success message (security: don't reveal OAuth status)
         return RequestPasswordResetResponse(
             success=True,
             message="If an account exists with this email, you will receive password reset instructions."

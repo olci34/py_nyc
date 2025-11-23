@@ -1,4 +1,5 @@
 import resend
+from resend import Emails
 from typing import Optional
 from py_nyc.web.data_access.models.email import (
     Email,
@@ -24,24 +25,60 @@ class EmailLogic:
         if settings.resend_api_key:
             resend.api_key = settings.resend_api_key
 
-    async def send_email(
+    def _is_resend_configured(self) -> bool:
+        """Check if Resend API is configured."""
+        return self.settings.resend_api_key is not None
+
+    async def _persist_email_record(
         self,
         request: SendEmailRequest,
-        template_id: Optional[str] = None
-    ) -> SendEmailResponse:
+        status: EmailStatus,
+        provider_message_id: Optional[str] = None,
+        error_message: Optional[str] = None
+    ) -> Email:
         """
-        Send an email via Resend and persist metadata to database.
-        Supports both HTML emails and Resend templates.
+        Persist email record to database.
 
         Args:
-            request: SendEmailRequest with email details
-            template_id: Optional Resend template ID (e.g., "pwdreset_en")
+            request: Original email request
+            status: Email status (SENT or FAILED)
+            provider_message_id: ID from email provider (if successful)
+            error_message: Error message (if failed)
 
         Returns:
-            SendEmailResponse with success status and IDs
+            Created email record
         """
-        # Check if Resend is configured
-        if not self.settings.resend_api_key:
+        email_record = Email(
+            to=request.to,
+            to_name=request.to_name,
+            subject=request.subject,
+            email_type=request.email_type,
+            from_email=self.settings.resend_from_email,
+            from_name=self.settings.resend_from_name,
+            user_id=request.user_id,
+            template_data=request.template_data,
+            status=status,
+            provider_message_id=provider_message_id,
+            error_message=error_message
+        )
+        return await self.email_service.create(email_record)
+
+    async def _send_template_email(
+        self,
+        request: SendEmailRequest,
+        template_id: str
+    ) -> SendEmailResponse:
+        """
+        Send email using Resend template.
+
+        Args:
+            request: Email request with template variables
+            template_id: Resend template ID
+
+        Returns:
+            SendEmailResponse with success status
+        """
+        if not self._is_resend_configured():
             print("Resend API key not configured. Email sending is disabled.")
             return SendEmailResponse(
                 success=False,
@@ -49,75 +86,104 @@ class EmailLogic:
             )
 
         try:
-            # Create email record in database (status: PENDING)
-            email_record = Email(
-                to=request.to,
-                to_name=request.to_name,
-                subject=request.subject,
-                email_type=request.email_type,
-                from_email=self.settings.resend_from_email,
-                from_name=self.settings.resend_from_name,
-                user_id=request.user_id,
-                template_data=request.template_data,
-                status=EmailStatus.PENDING
-            )
-            created_email = await self.email_service.create(email_record)
+            # Build SendParams for template email
+            params = Emails.SendParams({
+                "to": [request.to],
+                "template": {
+                    "id": template_id,
+                    "variables": request.template_data
+                }
+            })
 
             # Send email via Resend
-            try:
-                params = {
-                    "to": [request.to],
-                }
+            response = resend.Emails.send(params)
 
-                # Use template or HTML
-                if template_id and request.template_data:
-                    # Use Resend template with variables
-                    # Pass template data directly as top-level parameters
-                    params["from"] = f"{self.settings.resend_from_name} <{self.settings.resend_from_email}>"
-                    params["template"] = template_id
-                    params.update(request.template_data)  # Merge template variables directly into params
-                else:
-                    # Use HTML - need to specify "from" address and subject
-                    params["from"] = f"{self.settings.resend_from_name} <{self.settings.resend_from_email}>"
-                    params["subject"] = request.subject
-                    params["html"] = request.html
+            # Persist successful email to database
+            created_email = await self._persist_email_record(
+                request=request,
+                status=EmailStatus.SENT,
+                provider_message_id=response.get('id') if isinstance(response, dict) else None
+            )
 
-                response = resend.Emails.send(params)
-
-                # Update email record with success status
-                await self.email_service.update_status(
-                    str(created_email.id),
-                    EmailStatus.SENT,
-                    provider_message_id=response.get(
-                        'id') if isinstance(response, dict) else None
-                )
-
-                return SendEmailResponse(
-                    success=True,
-                    message="Email sent successfully",
-                    email_id=str(created_email.id),
-                    provider_message_id=response.get(
-                        'id') if isinstance(response, dict) else None
-                )
-
-            except Exception as resend_error:
-                # Update email record with failure status
-                await self.email_service.update_status(
-                    str(created_email.id),
-                    EmailStatus.FAILED,
-                    error_message=str(resend_error)
-                )
-
-                return SendEmailResponse(
-                    success=False,
-                    message=f"Failed to send email: {str(resend_error)}",
-                    email_id=str(created_email.id)
-                )
+            return SendEmailResponse(
+                success=True,
+                message="Email sent successfully",
+                email_id=str(created_email.id),
+                provider_message_id=response.get('id') if isinstance(response, dict) else None
+            )
 
         except Exception as e:
+            # Persist failed email to database
+            created_email = await self._persist_email_record(
+                request=request,
+                status=EmailStatus.FAILED,
+                error_message=str(e)
+            )
+
             return SendEmailResponse(
                 success=False,
-                message=f"Error creating email record: {str(e)}"
+                message=f"Failed to send email: {str(e)}",
+                email_id=str(created_email.id)
+            )
+
+    async def _send_html_email(
+        self,
+        request: SendEmailRequest
+    ) -> SendEmailResponse:
+        """
+        Send email using HTML content.
+
+        Args:
+            request: Email request with HTML content
+
+        Returns:
+            SendEmailResponse with success status
+        """
+        if not self._is_resend_configured():
+            print("Resend API key not configured. Email sending is disabled.")
+            return SendEmailResponse(
+                success=False,
+                message="Email service not configured"
+            )
+
+        try:
+            # Build SendParams for HTML email
+            params = Emails.SendParams({
+                "to": [request.to],
+                "from": f"{self.settings.resend_from_name} <{self.settings.resend_from_email}>",
+                "subject": request.subject,
+                "html": request.html
+            })
+
+            # Send email via Resend
+            response = resend.Emails.send(params)
+
+            # Persist successful email to database
+            created_email = await self._persist_email_record(
+                request=request,
+                status=EmailStatus.SENT,
+                provider_message_id=response.get('id') if isinstance(response, dict) else None
+            )
+
+            return SendEmailResponse(
+                success=True,
+                message="Email sent successfully",
+                email_id=str(created_email.id),
+                provider_message_id=response.get('id') if isinstance(response, dict) else None
+            )
+
+        except Exception as e:
+            # Persist failed email to database
+            created_email = await self._persist_email_record(
+                request=request,
+                status=EmailStatus.FAILED,
+                error_message=str(e)
+            )
+
+            return SendEmailResponse(
+                success=False,
+                message=f"Failed to send email: {str(e)}",
+                email_id=str(created_email.id)
             )
 
     async def send_welcome_email(
@@ -142,14 +208,13 @@ class EmailLogic:
             to=to_email,
             to_name=to_name,
             subject="Welcome to TLC Shift!",
-            html="",  # Not used when using template
+            html="",
             email_type=EmailType.WELCOME,
             user_id=user_id,
             template_data=template_data
         )
 
-        # Send using Resend template
-        return await self.send_email(request, template_id=self.settings.resend_template_welcome)
+        return await self._send_template_email(request, self.settings.resend_template_welcome)
 
     async def send_password_reset_email(
         self,
@@ -180,14 +245,13 @@ class EmailLogic:
             to=to_email,
             to_name=to_name,
             subject="Reset Your Password - TLC App",
-            html="",  # Not used when using template
+            html="",
             email_type=EmailType.PASSWORD_RESET,
             user_id=user_id,
             template_data=template_data
         )
 
-        # Send using Resend template
-        return await self.send_email(request, template_id=self.settings.resend_template_password_reset)
+        return await self._send_template_email(request, self.settings.resend_template_password_reset)
 
     async def send_waitlist_confirmation_email(
         self,
@@ -209,13 +273,47 @@ class EmailLogic:
             to=to_email,
             to_name=to_name,
             subject="Welcome to the Waitlist - TLC Shift",
-            html="",  # Not used when using template
+            html="",
             email_type=EmailType.WAITLIST_CONFIRMATION,
             template_data=template_data
         )
 
-        # Send using Resend template
-        return await self.send_email(request, template_id=self.settings.resend_template_waitlist)
+        return await self._send_template_email(request, self.settings.resend_template_waitlist)
+
+    async def send_oauth_password_attempt_email(
+        self,
+        to_email: str,
+        to_name: Optional[str],
+        user_id: str
+    ) -> SendEmailResponse:
+        """
+        Send email to OAuth users who try to reset password.
+        Explains they signed up with Google and should use Google sign-in.
+        Template variables: name, root_url, login_url
+        """
+        # Get frontend URL from settings (first CORS origin)
+        frontend_url = self.settings.cors_origins.split(",")[0]
+        login_url = f"{frontend_url}/signup-login"
+
+        display_name = to_name if to_name else "there"
+
+        template_data = {
+            "name": display_name,
+            "root_url": frontend_url,
+            "login_url": login_url
+        }
+
+        request = SendEmailRequest(
+            to=to_email,
+            to_name=to_name,
+            subject="About Your TLC Shift Account",
+            html="",
+            email_type=EmailType.OAUTH_PASSWORD_ATTEMPT,
+            user_id=user_id,
+            template_data=template_data
+        )
+
+        return await self._send_template_email(request, self.settings.resend_template_oauth_password_attempt)
 
     async def record_stripe_invoice_email(
         self,

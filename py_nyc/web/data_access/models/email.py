@@ -9,6 +9,7 @@ class EmailType(str, Enum):
     """Types of emails sent by the system"""
     WELCOME = "welcome"
     PASSWORD_RESET = "password_reset"
+    OAUTH_PASSWORD_ATTEMPT = "oauth_password_attempt"
     WAITLIST_CONFIRMATION = "waitlist_confirmation"
     STRIPE_INVOICE = "stripe_invoice"
     PAYMENT_SUCCESS = "payment_success"
