@@ -63,7 +63,15 @@ class UsersLogic:
     return await self.user_service.get_by_google_id(google_id)
 
   async def authenticate_or_register_google_user(
-    self, email: str, first_name: str, last_name: str, google_id: str, visitor_id: str | None
+    self,
+    email: str,
+    first_name: str,
+    last_name: str,
+    google_id: str,
+    visitor_id: str | None,
+    legal_consent_accepted: bool | None = None,
+    ip_address: str | None = None,
+    user_agent: str | None = None
   ) -> User:
     """
     Authenticate or register a user via Google OAuth.
@@ -72,7 +80,7 @@ class UsersLogic:
     1. Try to find user by google_id
     2. If not found, try to find by email
     3. If found by email but no google_id, update user with google_id
-    4. If not found at all, create new user
+    4. If not found at all, create new user (requires consent)
 
     Returns the authenticated/created user.
     """
@@ -92,13 +100,21 @@ class UsersLogic:
       return user
 
     # 4. Create new user (no password for OAuth users)
+    # For new users, consent is required
+    now = datetime.now(timezone.utc)
+
     new_user = User(
       email=email,
       first_name=first_name,
       last_name=last_name,
       google_id=google_id,
       visitor_id=visitor_id,
-      password=None  # OAuth users don't have passwords
+      password=None,  # OAuth users don't have passwords
+      legal_consent_accepted=legal_consent_accepted if legal_consent_accepted is not None else False,
+      legal_consent_accepted_at=now if legal_consent_accepted else None,
+      legal_consent_ip_address=ip_address if legal_consent_accepted else None,
+      legal_consent_user_agent=user_agent if legal_consent_accepted else None,
+      legal_consent_version="1.0"
     )
     created_user = await self.register(new_user)
 
@@ -353,3 +369,34 @@ class UsersLogic:
           success=False,
           message="An error occurred. Please try again later."
       )
+
+  async def update_cookie_consent(
+      self,
+      user_id: str,
+      accepted: bool,
+      ip_address: str | None = None,
+      user_agent: str | None = None
+  ) -> bool:
+    """
+    Update cookie consent for a user.
+
+    Args:
+        user_id: The user's ID
+        accepted: Whether the user accepted cookies
+        ip_address: Client IP address for audit trail
+        user_agent: Browser user agent for audit trail
+
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+      user = await self.user_service.update_cookie_consent(
+          user_id=user_id,
+          accepted=accepted,
+          ip_address=ip_address,
+          user_agent=user_agent
+      )
+      return user is not None
+    except Exception as e:
+      print(f"Error updating cookie consent: {str(e)}")
+      return False

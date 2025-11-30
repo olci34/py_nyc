@@ -1,5 +1,5 @@
 from typing import Optional
-from datetime import timedelta
+from datetime import timedelta, datetime, timezone
 from fastapi import APIRouter, Body, HTTPException, status, Depends, Request
 from pydantic import BaseModel
 from py_nyc.web.api.models.login_response import AuthUser, LoginResponse
@@ -23,6 +23,7 @@ class SignupData(BaseModel):
     first_name: str
     last_name: str
     visitor_id: Optional[str] = None
+    legal_consent_accepted: bool
 
 
 class LoginData(BaseModel):
@@ -36,30 +37,55 @@ class GoogleAuthData(BaseModel):
     last_name: str
     google_id: str
     visitor_id: Optional[str] = None
+    legal_consent_accepted: Optional[bool] = None
+
+
+class CookieConsentData(BaseModel):
+    accepted: bool
 
 
 users_router = APIRouter(prefix='/users')
 
 
 @users_router.post('/signup', status_code=status.HTTP_201_CREATED)
-async def signup(users_logic: UsersLogicDep, signup_data: SignupData = Body()):
+async def signup(request: Request, users_logic: UsersLogicDep, signup_data: SignupData = Body()):
+    # Validate consent
+    if not signup_data.legal_consent_accepted:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You must accept the Terms of Service and Privacy Policy to create an account",
+        )
+
     # Check if user with same email exists
     user = await users_logic.find_by_email(signup_data.email)
     if user is not None:
-        return HTTPException(
+        raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="User with this email already exists",
         )
 
     # Hash Password
     hashed_pwd = bcrypt_pwd(signup_data.password)
+
+    # Get current timestamp for consent tracking
+    now = datetime.now(timezone.utc)
+
+    # Get client IP address and user agent for consent audit trail
+    ip_address = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent")
+
     # Register User
     user = User(
         email=signup_data.email,
         password=hashed_pwd,
         first_name=signup_data.first_name,
         last_name=signup_data.last_name,
-        visitor_id=signup_data.visitor_id
+        visitor_id=signup_data.visitor_id,
+        legal_consent_accepted=signup_data.legal_consent_accepted,
+        legal_consent_accepted_at=now if signup_data.legal_consent_accepted else None,
+        legal_consent_ip_address=ip_address if signup_data.legal_consent_accepted else None,
+        legal_consent_user_agent=user_agent if signup_data.legal_consent_accepted else None,
+        legal_consent_version="1.0"
     )
     await users_logic.register(user)
     return True
@@ -83,7 +109,7 @@ async def login(users_logic: UsersLogicDep, login_data: LoginData = Body()):
 
 
 @users_router.post('/google-auth', response_model=LoginResponse)
-async def google_auth(users_logic: UsersLogicDep, google_data: GoogleAuthData = Body()):
+async def google_auth(request: Request, users_logic: UsersLogicDep, google_data: GoogleAuthData = Body()):
     """
     Authenticate or register a user via Google OAuth.
 
@@ -95,12 +121,19 @@ async def google_auth(users_logic: UsersLogicDep, google_data: GoogleAuthData = 
     5. Return user data and access token
     """
     try:
+        # Get client IP address and user agent for consent audit trail
+        ip_address = request.client.host if request.client else None
+        user_agent = request.headers.get("user-agent")
+
         user = await users_logic.authenticate_or_register_google_user(
             email=google_data.email,
             first_name=google_data.first_name,
             last_name=google_data.last_name,
             google_id=google_data.google_id,
-            visitor_id=google_data.visitor_id
+            visitor_id=google_data.visitor_id,
+            legal_consent_accepted=google_data.legal_consent_accepted,
+            ip_address=ip_address,
+            user_agent=user_agent
         )
 
         # Generate access token
@@ -216,3 +249,43 @@ async def change_password(
         )
 
     return result
+
+
+@users_router.put('/me/cookie-consent')
+async def update_cookie_consent(
+    request: Request,
+    users_logic: UsersLogicDep,
+    consent_data: CookieConsentData = Body(),
+    user_info: dict = Depends(get_user_info)
+):
+    """
+    Update cookie consent for an authenticated user.
+
+    This endpoint tracks:
+    - User's consent decision (accepted/rejected)
+    - Timestamp of consent
+    - IP address when consent was given
+    - User agent (browser/device info) when consent was given
+
+    Security features:
+    - Requires authentication (JWT token)
+    - Records audit trail for compliance
+    """
+    # Get client IP address and user agent for consent audit trail
+    ip_address = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent")
+
+    success = await users_logic.update_cookie_consent(
+        user_id=user_info['id'],
+        accepted=consent_data.accepted,
+        ip_address=ip_address,
+        user_agent=user_agent
+    )
+
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update cookie consent"
+        )
+
+    return {"success": True, "message": "Cookie consent updated successfully"}

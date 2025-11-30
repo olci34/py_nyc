@@ -34,3 +34,20 @@ class UserService:
 
     async def get_by_id(self, user_id: str) -> User | None:
         return await User.get(user_id)
+
+    async def update_cookie_consent(
+        self,
+        user_id: str,
+        accepted: bool,
+        ip_address: str | None,
+        user_agent: str | None
+    ) -> User | None:
+        user = await User.get(user_id)
+        if user:
+            user.cookie_consent_accepted = accepted
+            user.cookie_consent_accepted_at = datetime.now(timezone.utc)
+            user.cookie_consent_ip_address = ip_address
+            user.cookie_consent_user_agent = user_agent
+            user.updated_at = datetime.now(timezone.utc)
+            await user.save()
+        return user

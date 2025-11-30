@@ -13,6 +13,20 @@ class User(Document):
     google_id: Optional[str] = None
     visitor_id: Optional[str] = None
     stripe_customer_id: Optional[str] = None  # Stripe Customer ID for billing
+
+    # Legal consent tracking (for audit/compliance proof)
+    legal_consent_accepted: bool = False
+    legal_consent_accepted_at: Optional[datetime] = None
+    legal_consent_ip_address: Optional[str] = None  # IP address when consent was given
+    legal_consent_user_agent: Optional[str] = None  # Browser/device info when consent was given
+    legal_consent_version: str = "1.0"  # Version of Terms/Privacy at time of consent
+
+    # Cookie consent tracking (for U.S. compliance)
+    cookie_consent_accepted: Optional[bool] = None
+    cookie_consent_accepted_at: Optional[datetime] = None
+    cookie_consent_ip_address: Optional[str] = None  # IP address when cookie consent was given
+    cookie_consent_user_agent: Optional[str] = None  # Browser/device info when cookie consent was given
+
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(
