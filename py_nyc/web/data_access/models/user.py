@@ -6,23 +6,24 @@ from pymongo import IndexModel, ASCENDING
 
 
 class User(Document):
-  email: EmailStr = Indexed(unique=True)
-  password: Optional[str] = None
-  first_name: str
-  last_name: str
-  google_id: Optional[str] = None
-  visitor_id: Optional[str] = None
-  stripe_customer_id: Optional[str] = None  # Stripe Customer ID for billing
-  created_at: datetime = Field(
-      default_factory=lambda: datetime.now(timezone.utc))
-  updated_at: datetime = Field(
-      default_factory=lambda: datetime.now(timezone.utc))
+    email: EmailStr = Indexed(unique=True)
+    password: Optional[str] = None
+    first_name: str
+    last_name: str
+    google_id: Optional[str] = None
+    visitor_id: Optional[str] = None
+    stripe_customer_id: Optional[str] = None  # Stripe Customer ID for billing
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc))
 
-  class Settings:
-    name = "users"
-    indexes = [
-      IndexModel([("google_id", ASCENDING)], unique=True, sparse=True)
-    ]
+    class Settings:
+        name = "users"
+        indexes = [
+            # Index for fast google_id lookups (not unique, sparse to ignore nulls)
+            IndexModel([("google_id", ASCENDING)], sparse=True)
+        ]
 
 
 class UserResponse(BaseModel):

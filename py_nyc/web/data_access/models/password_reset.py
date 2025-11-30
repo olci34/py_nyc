@@ -89,3 +89,9 @@ class ResetPasswordResponse(BaseModel):
     """Response after resetting password"""
     success: bool
     message: str
+
+
+class ChangePasswordRequest(BaseModel):
+    """Request to change password for authenticated user"""
+    current_password: str
+    new_password: str

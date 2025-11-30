@@ -8,7 +8,8 @@ from py_nyc.web.data_access.models.password_reset import (
     RequestPasswordResetRequest,
     RequestPasswordResetResponse,
     ResetPasswordRequest,
-    ResetPasswordResponse
+    ResetPasswordResponse,
+    ChangePasswordRequest
 )
 from py_nyc.web.dependencies import UsersLogicDep
 from py_nyc.web.utils.auth import create_access_token, get_user_info
@@ -175,6 +176,37 @@ async def reset_password(
     result = await users_logic.reset_password(
         token=reset_request.token,
         new_password=reset_request.new_password
+    )
+
+    if not result.success:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=result.message
+        )
+
+    return result
+
+
+@users_router.post('/change-password', response_model=ResetPasswordResponse)
+async def change_password(
+    users_logic: UsersLogicDep,
+    change_request: ChangePasswordRequest = Body(),
+    user_info: dict = Depends(get_user_info)
+):
+    """
+    Change password for an authenticated user.
+
+    Security features:
+    - Requires authentication (JWT token)
+    - Verifies current password before allowing change
+    - New password must meet strength requirements
+    - Password is hashed before storing
+    - All password reset tokens are invalidated
+    """
+    result = await users_logic.change_password(
+        user_id=user_info['id'],
+        current_password=change_request.current_password,
+        new_password=change_request.new_password
     )
 
     if not result.success:

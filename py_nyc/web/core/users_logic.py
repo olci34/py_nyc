@@ -279,3 +279,77 @@ class UsersLogic:
           success=False,
           message="An error occurred. Please try again later."
       )
+
+  async def change_password(
+      self,
+      user_id: str,
+      current_password: str,
+      new_password: str
+  ) -> ResetPasswordResponse:
+    """
+    Change password for an authenticated user.
+
+    Security measures:
+    - Requires current password verification
+    - New password must meet strength requirements
+    - Password is hashed before storing
+    """
+    try:
+      # Get user
+      user = await self.user_service.get_by_id(user_id)
+
+      if not user:
+        return ResetPasswordResponse(
+            success=False,
+            message="User not found"
+        )
+
+      # OAuth users don't have passwords
+      if not user.password:
+        return ResetPasswordResponse(
+            success=False,
+            message="Password change not available for OAuth users. Please use your Google account."
+        )
+
+      # Verify current password
+      if not verify_pwd(user.password, current_password):
+        return ResetPasswordResponse(
+            success=False,
+            message="Current password is incorrect"
+        )
+
+      # Validate new password strength
+      if len(new_password) < 8:
+        return ResetPasswordResponse(
+            success=False,
+            message="Password must be at least 8 characters long"
+        )
+
+      # Prevent reusing the same password
+      if verify_pwd(user.password, new_password):
+        return ResetPasswordResponse(
+            success=False,
+            message="New password must be different from current password"
+        )
+
+      # Hash and update password
+      hashed_password = bcrypt_pwd(new_password)
+      user.password = hashed_password
+      user.updated_at = datetime.now(timezone.utc)
+      await user.save()
+
+      # Invalidate all password reset tokens for this user (if service available)
+      if self.password_reset_service:
+        await self.password_reset_service.invalidate_user_tokens(str(user.id))
+
+      return ResetPasswordResponse(
+          success=True,
+          message="Password changed successfully"
+      )
+
+    except Exception as e:
+      print(f"Error changing password: {str(e)}")
+      return ResetPasswordResponse(
+          success=False,
+          message="An error occurred. Please try again later."
+      )
