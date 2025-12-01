@@ -289,3 +289,36 @@ async def update_cookie_consent(
         )
 
     return {"success": True, "message": "Cookie consent updated successfully"}
+
+
+@users_router.delete('/me', status_code=status.HTTP_200_OK)
+async def delete_account(
+    users_logic: UsersLogicDep,
+    user_info: dict = Depends(get_user_info)
+):
+    """
+    Schedule account for deletion with a 7-day grace period.
+
+    This endpoint:
+    - Marks the user account for deletion
+    - Records deletion timestamp
+    - Account will be deactivated immediately
+    - User has 7 days to sign back in to cancel deletion
+    - After 7 days, account and all listings will be permanently deleted
+
+    Security features:
+    - Requires authentication (JWT token)
+    - Grace period allows accidental deletion recovery
+    """
+    success = await users_logic.schedule_account_deletion(user_id=user_info['id'])
+
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to schedule account deletion"
+        )
+
+    return {
+        "success": True,
+        "message": "Account scheduled for deletion. You have 7 days to sign back in to cancel."
+    }

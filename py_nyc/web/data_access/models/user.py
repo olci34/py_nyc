@@ -27,6 +27,9 @@ class User(Document):
     cookie_consent_ip_address: Optional[str] = None  # IP address when cookie consent was given
     cookie_consent_user_agent: Optional[str] = None  # Browser/device info when cookie consent was given
 
+    # Account deletion tracking (soft delete with 7-day grace period)
+    scheduled_for_deletion_at: Optional[datetime] = None  # When user requested deletion
+
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(

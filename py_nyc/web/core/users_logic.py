@@ -37,6 +37,12 @@ class UsersLogic:
     if not verify_pwd(user.password, password):
       return False
 
+    # If user is scheduled for deletion, cancel it (they're signing back in)
+    if user.scheduled_for_deletion_at:
+      await self.cancel_account_deletion(str(user.id))
+      # Reload user to get updated data
+      user = await self.user_service.get_by_id(str(user.id))
+
     return user
 
   async def register(self, user: User):
@@ -88,6 +94,11 @@ class UsersLogic:
     user = await self.find_by_google_id(google_id)
 
     if user:
+      # If user is scheduled for deletion, cancel it (they're signing back in)
+      if user.scheduled_for_deletion_at:
+        await self.cancel_account_deletion(str(user.id))
+        # Reload user to get updated data
+        user = await self.user_service.get_by_id(str(user.id))
       # User found by google_id, return existing user
       return user
 
@@ -95,6 +106,9 @@ class UsersLogic:
     user = await self.find_by_email(email)
 
     if user:
+      # If user is scheduled for deletion, cancel it (they're signing back in)
+      if user.scheduled_for_deletion_at:
+        await self.cancel_account_deletion(str(user.id))
       # 3. User exists with email but no google_id, update it
       user = await self.user_service.update_google_id(str(user.id), google_id)
       return user
@@ -399,4 +413,45 @@ class UsersLogic:
       return user is not None
     except Exception as e:
       print(f"Error updating cookie consent: {str(e)}")
+      return False
+
+  async def schedule_account_deletion(self, user_id: str) -> bool:
+    """
+    Schedule a user account for deletion with a 7-day grace period.
+
+    During the grace period:
+    - User cannot log in
+    - Account is marked for deletion
+    - If user logs in again, deletion is cancelled
+
+    After 7 days, a cleanup job will permanently delete the account.
+
+    Args:
+        user_id: The user's ID
+
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+      user = await self.user_service.schedule_for_deletion(user_id=user_id)
+      return user is not None
+    except Exception as e:
+      print(f"Error scheduling account deletion: {str(e)}")
+      return False
+
+  async def cancel_account_deletion(self, user_id: str) -> bool:
+    """
+    Cancel a scheduled account deletion (when user signs back in).
+
+    Args:
+        user_id: The user's ID
+
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+      user = await self.user_service.cancel_deletion(user_id)
+      return user is not None
+    except Exception as e:
+      print(f"Error cancelling account deletion: {str(e)}")
       return False

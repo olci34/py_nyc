@@ -51,3 +51,39 @@ class UserService:
             user.updated_at = datetime.now(timezone.utc)
             await user.save()
         return user
+
+    async def schedule_for_deletion(self, user_id: str) -> User | None:
+        """Schedule a user account for deletion with a 7-day grace period"""
+        user = await User.get(user_id)
+        if user:
+            user.scheduled_for_deletion_at = datetime.now(timezone.utc)
+            user.updated_at = datetime.now(timezone.utc)
+            await user.save()
+        return user
+
+    async def cancel_deletion(self, user_id: str) -> User | None:
+        """Cancel a scheduled account deletion (when user signs back in)"""
+        user = await User.get(user_id)
+        if user:
+            user.scheduled_for_deletion_at = None
+            user.updated_at = datetime.now(timezone.utc)
+            await user.save()
+        return user
+
+    async def get_users_scheduled_for_deletion(self, days: int = 7) -> list[User]:
+        """Get all users scheduled for deletion past the grace period"""
+        from datetime import timedelta
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
+        users = await User.find(
+            User.scheduled_for_deletion_at != None,
+            User.scheduled_for_deletion_at <= cutoff_date
+        ).to_list()
+        return users
+
+    async def permanently_delete(self, user_id: str) -> bool:
+        """Permanently delete a user account"""
+        user = await User.get(user_id)
+        if user:
+            await user.delete()
+            return True
+        return False
